@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+
+# Script to set up working environment
+
+# Default variables
+dir=RA4_7_4_14
+release=7_4_14
+err=false
+cvmfs=false
+
+usage(){
+    echo "Usage: . setupEnvironment_inc [option]"
+    echo "where [option] can be"
+    echo "-h                 Show this help"
+    echo "-d dir             Set CMSSW directory (default: ${dir})"
+    echo "-r release         Use CMSSW release (default: ${release})"
+    echo "-c                 Give /cvmfs binaries precedence over private ones"
+}
+
+setupEnv(){
+    echo "Setting up release ${release} in directory ${dir}."
+    cmssw
+    scram project -n "${dir}" CMSSW CMSSW_"${release}"
+    pwd="${PWD}"
+    cd "${dir}"/src
+    eval `scramv1 runtime -sh`
+    cd "${pwd}"
+    if [ "${cvmfs}" == false ]; then
+        export PATH="${HOME}"/pkg/bin:/uscms_data/d1/bschneid/pkg/bin:"${PATH}"
+    fi
+}
+
+parseOptions(){
+
+    OPT=$(getopt \
+        --options hd:r:c \
+        --name "setupEnvironment_inc" \
+        -- "$@"
+    )
+
+    if [ $? -ne 0 ]; then
+        err=true
+    fi
+
+    eval set -- "${OPT}"
+
+    while true; do
+        case "${1}" in
+            -h)
+                err=true
+                return 0
+            ;;
+            -d)
+                dir="${2}"
+                shift 2
+            ;;
+            -r)
+                release="${2}"
+                shift 2
+            ;;
+            -c)
+                cvmfs=true
+                shift 1
+            ;;
+            --)
+                shift
+                break
+            ;;
+        esac
+    done
+}
+
+main(){
+    parseOptions "$@"
+    if [ "${err}" == true ]; then
+        usage
+        return 1
+    fi
+    setupEnv
+}
+
+main "$@"
