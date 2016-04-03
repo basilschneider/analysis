@@ -25,7 +25,7 @@ setupEnv(){
     cd "${dir}"/src
     eval `scramv1 runtime -sh`
     cd "${pwd}"
-    if [ "${cvmfs}" == false ]; then
+    if [ "${cvmfs}" = false ]; then
         export PATH="${HOME}"/pkg/bin:/uscms_data/d1/bschneid/pkg/bin:"${PATH}"
     fi
 }
@@ -72,7 +72,7 @@ parseOptions(){
 
 main(){
     parseOptions "$@"
-    if [ "${err}" == true ]; then
+    if [ "${err}" = true ]; then
         usage
         return 1
     fi
