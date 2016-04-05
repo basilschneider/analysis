@@ -2,13 +2,15 @@
 
 # Wrapper script to create n-tuples and friend trees from MiniAOD
 
-set -euf -o pipefail
+set -e -o pipefail
 
 dir=~/analysis/datasets/
 out=output
 eos=root://eoscms.cern.ch//eos/cms/store/cmst3/group/susy/alobanov/MC/CMGtuples/MiniAODv2/Spring15_CBID/Skim_HT350_LooseLep/
 tree=treeProducerSusySingleLepton
+condor=false
 verbose=false
+debug=false
 
 usage(){
     echo "Usage: $0 [option]"
@@ -18,14 +20,17 @@ usage(){
     echo "-d dir             Path to output directory (default: $dir)"
     echo "-e eos             Path to eos directory (default: $eos)"
     echo "-t                 Path to tree in eos directory (default: $tree)"
+    echo "-c                 Run on condor (default: $condor)"
     echo "-v                 Be verbose"
+    echo "--debug            Debug messages (default: $debug)"
 }
 
 parseOptions(){
 
     # Check for flags
     OPT=$(getopt \
-        --options ho:d:e:v \
+        --options hco:d:e:v \
+        --long debug \
         --name "$0" \
         -- "$@"
     )
@@ -42,10 +47,14 @@ parseOptions(){
                 shift 2;;
             -e) eos="${2}"
                 shift 2;;
-            -v) verbose=true
-                shift 1;;
             -t) tree="${2}"
                 shift 2;;
+            -c) condor=true
+                shift 1;;
+            -v) verbose=true
+                shift 1;;
+            --debug) debug=true
+                shift 1;;
             --) shift
                 break;;
         esac
@@ -71,59 +80,86 @@ parseEos(){
 
 produceFriends(){
 
-    # Pipe output to /dev/null if verbosity is not requested
-    pipeout=
-    if [ "$verbose" = false ]; then
-        pipeout=">/dev/null"
-    fi
+    # Commands to be executed later
+    cmd=()
 
     # Get list of trees
-    echo -n "Get datasets from eos... "
-    datasets=$(xrdfs $eosSite ls $eosPath)
-    echo "Done."
+    cmd+=('echo -n "Get datasets from eos... "')
+    cmd+=('datasets=$(xrdfs $eosSite ls $eosPath)')
+    cmd+=('echo Done.')
 
     if [ "$verbose" = true ]; then
-        echo "Datasets found on eos:"
-        sed 's/ /\n/g' <<< "${datasets}"
+        cmd+=('echo Datasets found on eos:')
+        cmd+=('sed "s/ /\n/g" <<< ${datasets}')
     fi
 
     # Create temporary directory to download samples from eos
-    tmp="${dir}/tmp"
-    mkdir -p "${tmp}"
+    tmp=${dir}/tmp
+    cmd+=('mkdir -p ${tmp}')
 
     # Make output absolute, since we are changing directory later
     if [ "${out:0:1}" != "/" ]; then
-        out="${PWD}"/"${out}"
+        cmd+=('out=${PWD}/${out}')
     fi
 
-    for dataset in ${datasets}; do
-        sample=${dataset##*/}
-        echo "Process dataset ${sample}."
-        # Build directory structure that can be read by idiotic python script
-        mkdir -p "${tmp}/${sample}/${tree}"
-        # Subshell to download sample
-        (
-        cd "${tmp}/${sample}/${tree}"
-        echo "Download sample from eos... "
-        eval "xrdcp -f ${eosSite}${dataset}/${tree}/tree.root . ${pipeout}"
-        )
-        # Subshell to make friend trees
-        (
-        cd ${CMSSW_BASE}/src/CMGTools/SUSYAnalysis/macros/
-        echo -n "Produce friend tree... "
-        eval "python prepareEventVariablesFriendTree.py \
-            ${tmp} ${out} ${pipeout}"
-        echo "Done."
-        )
-        # Clean up
-        rm -rf "${tmp}/${sample}"
-    done
+    cmd+=('for dataset in ${datasets}; do')
+    cmdappend 'sample=${dataset##*/};'
+    cmdappend 'echo Process dataset ${sample}.;'
+    # Build directory structure that can be read by idiotic python script
+    cmdappend 'mkdir -p ${tmp}/${sample}/${tree};'
+    # Subshell to download sample
+    cmdappend '('
+    cmdappend 'cd ${tmp}/${sample}/${tree};'
+    cmdappend 'echo Download sample from eos... ;'
+    cmdappend 'xrdcp -f ${eosSite}${dataset}/${tree}/tree.root .'
+    pipeout
+    cmdappend ');'
+    # Subshell to make friend trees
+    cmdappend '('
+    cmdappend 'cd ${CMSSW_BASE}/src/CMGTools/SUSYAnalysis/macros/;'
+    cmdappend 'echo -n "Produce friend tree... ";'
+    cmdappend 'python prepareEventVariablesFriendTree.py -N 10000 -j 24 '
+    cmdappend '${tmp} ${out}'
+    pipeout
+    cmdappend 'echo Done.;'
+    cmdappend ');'
+    # Clean up
+    #rm -rf "${tmp}/${sample}"
+    cmdappend 'done'
+}
+
+# Append to last cmd entry
+cmdappend(){
+    cmd[${#cmd[@]}-1]+=" $1"
+}
+
+# If verbosity is disable, pipe output to /dev/null
+pipeout(){
+    if [ "$verbose" = false ]; then
+        cmdappend ' >/dev/null;'
+    else
+        cmdappend ';'
+    fi
+}
+
+# Invoke cmd command
+invokeCmd(){
+    # Invoke command(s) in subshell
+    (
+        for c in "${cmd[@]}"; do
+            if [ "$debug" == "true" ]; then
+                echo "$c"
+            fi
+            eval "$c"
+        done
+    )
 }
 
 main(){
     parseOptions "$@"
     parseEos
     produceFriends
+    invokeCmd
 }
 
 main "$@"
