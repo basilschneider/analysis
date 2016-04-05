@@ -102,43 +102,57 @@ produceFriends(){
         cmd+=('out=${PWD}/${out}')
     fi
 
+    if [ "${condor}" == true ]; then
+        cmd_condor
+    else
+        cmd_local
+    fi
+}
+
+# When running on condor
+cmd_condor(){
+    cmd+=('echo yeah')
+}
+
+# When running locally
+cmd_local(){
     cmd+=('for dataset in ${datasets}; do')
-    cmdappend 'sample=${dataset##*/};'
-    cmdappend 'echo Process dataset ${sample}.;'
+    cmdadd 'sample=${dataset##*/};'
+    cmdadd 'echo Process dataset ${sample}.;'
     # Build directory structure that can be read by idiotic python script
-    cmdappend 'mkdir -p ${tmp}/${sample}/${tree};'
+    cmdadd 'mkdir -p ${tmp}/${sample}/${tree};'
     # Subshell to download sample
-    cmdappend '('
-    cmdappend 'cd ${tmp}/${sample}/${tree};'
-    cmdappend 'echo Download sample from eos... ;'
-    cmdappend 'xrdcp -f ${eosSite}${dataset}/${tree}/tree.root .'
+    cmdadd '('
+    cmdadd 'cd ${tmp}/${sample}/${tree};'
+    cmdadd 'echo Download sample from eos... ;'
+    cmdadd 'xrdcp -f ${eosSite}${dataset}/${tree}/tree.root .'
     pipeout
-    cmdappend ');'
+    cmdadd ');'
     # Subshell to make friend trees
-    cmdappend '('
-    cmdappend 'cd ${CMSSW_BASE}/src/CMGTools/SUSYAnalysis/macros/;'
-    cmdappend 'echo -n "Produce friend tree... ";'
-    cmdappend 'python prepareEventVariablesFriendTree.py -N 10000 -j 24 '
-    cmdappend '${tmp} ${out}'
+    cmdadd '('
+    cmdadd 'cd ${CMSSW_BASE}/src/CMGTools/SUSYAnalysis/macros/;'
+    cmdadd 'echo -n "Produce friend tree... ";'
+    cmdadd 'python prepareEventVariablesFriendTree.py -N 10000 -j 24 '
+    cmdadd '${tmp} ${out}'
     pipeout
-    cmdappend 'echo Done.;'
-    cmdappend ');'
+    cmdadd 'echo Done.;'
+    cmdadd ');'
     # Clean up
-    #rm -rf "${tmp}/${sample}"
-    cmdappend 'done'
+    cmdadd 'rm -rf ${tmp}/${sample};'
+    cmdadd 'done'
 }
 
 # Append to last cmd entry
-cmdappend(){
+cmdadd(){
     cmd[${#cmd[@]}-1]+=" $1"
 }
 
 # If verbosity is disable, pipe output to /dev/null
 pipeout(){
     if [ "$verbose" = false ]; then
-        cmdappend ' >/dev/null;'
+        cmdadd ' >/dev/null;'
     else
-        cmdappend ';'
+        cmdadd ';'
     fi
 }
 
