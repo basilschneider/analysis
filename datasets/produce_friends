@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+
+# Wrapper script to create n-tuples and friend trees from MiniAOD
+
+set -euf -o pipefail
+
+dir=~/analysis/datasets/
+out=output
+eos=root://eoscms.cern.ch//eos/cms/store/cmst3/group/susy/alobanov/MC/CMGtuples/MiniAODv2/Spring15_CBID/Skim_HT350_LooseLep/
+tree=treeProducerSusySingleLepton
+verbose=false
+
+usage(){
+    echo "Usage: $0 [option]"
+    echo "where [option] can be"
+    echo "-h                 Show this help"
+    echo "-o output          Set name of output directory (default: $out)"
+    echo "-d dir             Path to output directory (default: $dir)"
+    echo "-e eos             Path to eos directory (default: $eos)"
+    echo "-t                 Path to tree in eos directory (default: $tree)"
+    echo "-v                 Be verbose"
+}
+
+parseOptions(){
+
+    # Check for flags
+    OPT=$(getopt \
+        --options ho:d:e:v \
+        --name "$0" \
+        -- "$@"
+    )
+
+    eval set -- "${OPT}"
+
+    while true; do
+        case "${1}" in
+            -h) usage
+                exit 0;;
+            -d) dir="${2}"
+                shift 2;;
+            -o) out="${2}"
+                shift 2;;
+            -e) eos="${2}"
+                shift 2;;
+            -v) verbose=true
+                shift 1;;
+            -t) tree="${2}"
+                shift 2;;
+            --) shift
+                break;;
+        esac
+    done
+
+    # Check for positional arguments
+    if [ $# -ne 0 ]; then
+        usage
+        exit 1
+    fi
+}
+
+parseEos(){
+    # Get site from eos variable, e.g.
+    # root://eoscms.cern.ch//eos/cms/store/ -->
+    # root://eoscms.cern.ch/
+    eosSite="${eos%\/\/*}"/
+    # Get path from eos, e.g.
+    # root://eoscms.cern.ch//eos/cms/store/ -->
+    # /eos/cms/store
+    eosPath=/"${eos##*\/\/}"
+}
+
+produceFriends(){
+
+    # Pipe output to /dev/null if verbosity is not requested
+    pipeout=
+    if [ "$verbose" = false ]; then
+        pipeout=">/dev/null"
+    fi
+
+    # Get list of trees
+    echo -n "Get datasets from eos... "
+    datasets=$(xrdfs $eosSite ls $eosPath)
+    echo "Done."
+
+    if [ "$verbose" = true ]; then
+        echo "Datasets found on eos:"
+        sed 's/ /\n/g' <<< "${datasets}"
+    fi
+
+    # Create temporary directory to download samples from eos
+    tmp="${dir}/tmp"
+    mkdir -p "${tmp}"
+
+    # Make output absolute, since we are changing directory later
+    if [ "${out:0:1}" != "/" ]; then
+        out="${PWD}"/"${out}"
+    fi
+
+    for dataset in ${datasets}; do
+        sample=${dataset##*/}
+        echo "Process dataset ${sample}."
+        # Build directory structure that can be read by idiotic python script
+        mkdir -p "${tmp}/${sample}/${tree}"
+        # Subshell to download sample
+        (
+        cd "${tmp}/${sample}/${tree}"
+        echo "Download sample from eos... "
+        eval "xrdcp -f ${eosSite}${dataset}/${tree}/tree.root . ${pipeout}"
+        )
+        # Subshell to make friend trees
+        (
+        cd ${CMSSW_BASE}/src/CMGTools/SUSYAnalysis/macros/
+        echo -n "Produce friend tree... "
+        eval "python prepareEventVariablesFriendTree.py \
+            ${tmp} ${out} ${pipeout}"
+        echo "Done."
+        )
+        # Clean up
+        rm -rf "${tmp}/${sample}"
+    done
+}
+
+main(){
+    parseOptions "$@"
+    parseEos
+    produceFriends
+}
+
+main "$@"

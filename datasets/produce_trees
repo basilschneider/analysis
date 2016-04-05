@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+
+# Wrapper script to create n-tuples and friend trees from MiniAOD
+
+set -euf -o pipefail
+
+dir=~/analysis/datasets/
+out=output
+n=-1
+
+usage(){
+    echo "Usage: $0 [option]"
+    echo "where [option] can be"
+    echo "-h                 Show this help"
+    echo "-o output          Set name of output directory (default: $out)"
+    echo "-d dir             Path to output directory (default: $dir)"
+    echo "-n n               Process n events"
+}
+
+parseOptions(){
+
+    # Check for flags
+    OPT=$(getopt \
+        --options ho:d:n: \
+        --name "$0" \
+        -- "$@"
+    )
+
+    eval set -- "${OPT}"
+
+    while true; do
+        case "${1}" in
+            -h) usage
+                exit 0;;
+            -d) dir="${2}"
+                shift 2;;
+            -o) out="${2}"
+                shift 2;;
+            -n) n="${2}"
+                shift 2;;
+            --) shift
+                break;;
+        esac
+    done
+
+    # Check for positional arguments
+    if [ $# -ne 0 ]; then
+        usage
+        exit 1
+    fi
+}
+
+makeCommand(){
+    log="${dir}"/"${out}".log
+    # Array with commands to run
+    cmd=()
+    cmd+=("cd ${CMSSW_BASE}/src/CMGTools/SUSYAnalysis/cfg/")
+    cmd+=("heppy \
+          ${dir}/${out} \
+          run_susySingleLepton_v2_cfg.py \
+          -p 0 \
+          -N ${n} \
+          2>&1 | tee ${log}" )
+    cmd+=("cd ${CMSSW_BASE}/src/CMGTools/SUSYAnalysis/macros/")
+    cmd+=("python prepareEventVariablesFriendTree.py \
+          ${dir}/${out} ${dir}/${out}")
+}
+
+invokeCommand(){
+    # Invoke command(s) in subshell
+    (
+        for c in "${cmd[@]}"; do
+            eval "$c"
+        done
+    )
+}
+
+
+main(){
+    parseOptions "$@"
+    makeCommand
+    invokeCommand
+}
+
+main "$@"
