@@ -11,6 +11,7 @@ tree=treeProducerSusySingleLepton
 condor=false
 verbose=false
 debug=false
+skip=(Friends)
 
 usage(){
     echo "Usage: $0 [option]"
@@ -103,20 +104,77 @@ produceFriends(){
     fi
 
     if [ "${condor}" == true ]; then
-        cmd_condor
+        cmdCondor
     else
-        cmd_local
+        cmdLocal
     fi
 }
 
 # When running on condor
-cmd_condor(){
-    # Loop over datasets
-    #cmd+=('for dataset in ${datasets}; do')
+cmdCondor(){
+    # File with info for condor
+    f_condor=${out}/condor_info
+
+    # Loop over datasets to get information
+    cmd+=('for dataset in ${datasets}; do')
+
+    # Get name of sample
+    cmdadd 'sample=${dataset##*/};'
+    cmdadd 'echo Get information for ${sample}.;'
+
+    # Check sample against list of samples that are skipped by default
+    cmdadd 'if [[ "${skip[@]}" =~ "${sample}" ]]; then '
+    cmdadd 'echo Sample is skipped by default.; continue; fi;'
+
+    # If sample is already in condor file, skip
+    cmdadd 'if grep -q ${sample} ${f_condor} 2>/dev/null; then '
+    cmdadd 'echo Sample already in condor file.; continue; fi;'
+
+    downloadSample
+
+    # Get number of entries in tree
+    cmdadd 'echo -n "Get number of events... ";'
+    cmdadd 'entries=$(python -c "from ToolboxHelper import \
+        get_tree_entries; print \
+        get_tree_entries(\"${tmp}/${sample}/${tree}/tree.root\", \"tree\")");'
+    cmdadd 'echo ${entries};'
+
+    # Write info into file for condor processing
+    cmdadd 'mkdir -p ${out};'
+    cmdadd 'echo ${eosSite} ${eosPath} ${sample} ${entries} >> ${f_condor};'
+
+    # Clean up
+    cmdadd 'rm -rf ${tmp}/${sample};'
+
+    # End loop
+    cmdadd 'done'
+
+    # Change output files of condor
+    cmd+=('sed -i "s/^Output.*/Output = ')
+    cmdadd '${out//\//\\/}\/friend_production_\$(Cluster).stdout/" condor;'
+    cmd+=('sed -i "s/^Error.*/Error = ')
+    cmdadd '${out//\//\\/}\/friend_production_\$(Cluster).stderr/" condor;'
+    cmd+=('sed -i "s/^Log.*/Log = ')
+    cmdadd '${out//\//\\/}\/friend_production_\$(Cluster).condor/" condor;'
+
+    # Loop over condor file to submit jobs
+    cmd+=('while read line; do')
+
+    # Change condor submission script
+    cmdadd 'sed -i "s/^Arguments.*/Arguments = ${line//\//\\/}/" condor;'
+
+    # Submit job
+    cmdadd 'condor_submit condor;'
+
+    ####### BREAK
+    cmdadd 'break;'
+
+    # End loop
+    cmdadd 'done < ${f_condor}'
 }
 
 # When running locally
-cmd_local(){
+cmdLocal(){
 
     # Loop over datasets
     cmd+=('for dataset in ${datasets}; do')
@@ -125,16 +183,7 @@ cmd_local(){
     cmdadd 'sample=${dataset##*/};'
     cmdadd 'echo Process dataset ${sample}.;'
 
-    # Build directory structure that can be read by idiotic python script
-    cmdadd 'mkdir -p ${tmp}/${sample}/${tree};'
-
-    # Subshell to download sample
-    cmdadd '('
-    cmdadd 'cd ${tmp}/${sample}/${tree};'
-    cmdadd 'echo Download sample from eos... ;'
-    cmdadd 'xrdcp -f ${eosSite}${dataset}/${tree}/tree.root .'
-    pipeout
-    cmdadd ');'
+    downloadSample
 
     # Subshell to make friend trees
     cmdadd '('
@@ -148,6 +197,8 @@ cmd_local(){
 
     # Clean up
     cmdadd 'rm -rf ${tmp}/${sample};'
+
+    # End loop
     cmdadd 'done'
 }
 
@@ -163,6 +214,20 @@ pipeout(){
     else
         cmdadd ';'
     fi
+}
+
+# Download sample from eos
+downloadSample(){
+    # Build directory structure that can be read by idiotic python script
+    cmdadd 'mkdir -p ${tmp}/${sample}/${tree};'
+
+    # Subshell to download sample
+    cmdadd '('
+    cmdadd 'cd ${tmp}/${sample}/${tree};'
+    cmdadd 'echo Download sample from eos... ;'
+    cmdadd 'xrdcp -f ${eosSite}${dataset}/${tree}/tree.root .'
+    pipeout
+    cmdadd ');'
 }
 
 # Invoke cmd command

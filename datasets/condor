@@ -1,0 +1,15 @@
+universe = vanilla
+Executable = condor_submission
+Requirements = OpSys == "LINUX" && (Arch != "DUMMY" )
+request_disk = 10000000
+request_memory = 2100
+Should_Transfer_Files = YES
+WhenToTransferOutput = ON_EXIT_OR_EVICT
+Transfer_Input_Files = condor_submission, /uscms_data/d3/bschneid/analysis/RA4_7_4_14/src/CMGTools/SUSYAnalysis
+Output =  /uscms/home/bschneid/analysis/datasets/run11_test/friend_production_$(Cluster).stdout
+Error =  /uscms/home/bschneid/analysis/datasets/run11_test/friend_production_$(Cluster).stderr
+Log =  /uscms/home/bschneid/analysis/datasets/run11_test/friend_production_$(Cluster).condor
+notification = Never
+x509userproxy = $ENV(X509_USER_PROXY)
+Arguments = root://eoscms.cern.ch/ /eos/cms/store/cmst3/group/susy/alobanov/MC/CMGtuples/MiniAODv2/Spring15_CBID/Skim_HT350_LooseLep/ DYJetsToLL_M50_HT100to200 [?1034h1645
+Queue 1

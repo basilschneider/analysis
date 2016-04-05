@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+# Condor submission script to produce friend trees
+
+# Build directory structure that can be read by idiotic python script
+echo hello world
+#mkdir -p tmp/${sample}/${tree}
