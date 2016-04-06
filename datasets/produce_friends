@@ -170,13 +170,11 @@ cmdCondor(){
     cmdadd 'if grep -q ${sample} ${f_condor} 2>/dev/null; then '
     cmdadd 'echo Sample already in condor file.; continue; fi;'
 
-    downloadSample
-
     # Get number of entries in tree
     cmdadd 'echo -n "Get number of events... ";'
     cmdadd 'entries=$(python -c "from ToolboxHelper import \
-        get_tree_entries; print \
-        get_tree_entries(\"${tmp}/${sample}/${tree}/tree.root\", \"tree\")");'
+        get_tree_entries_eos; print \
+        get_tree_entries_eos(\"${eosSite}${dataset}/${tree}/tree.root\", \"tree\")");'
     cmdadd 'echo ${entries};'
 
     # Write info into file for condor processing
