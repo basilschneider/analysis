@@ -226,7 +226,7 @@ cmdCondor(){
     cmdadd 'chunks=$(( (${nEvtsTot}+${nEvts}-1)/${nEvts} ));'
 
     # Loop over number of chunks
-    cmdadd 'for ((chunk=1; chunk<=${chunks}; ++chunk)); do'
+    cmdadd 'for ((chunk=0; chunk<${chunks}; ++chunk)); do'
 
     # Change condor submission script
     cmdadd 'sed -i "s/^Arguments.*/Arguments ='
