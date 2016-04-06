@@ -2,14 +2,14 @@ universe = vanilla
 Executable = condor_submission
 Requirements = OpSys == "LINUX" && (Arch != "DUMMY" )
 request_disk = 10000000
-request_memory = 2100
+request_memory = 5000
 Should_Transfer_Files = YES
 WhenToTransferOutput = ON_EXIT_OR_EVICT
 Transfer_Input_Files = condor_submission, tarball.tar.gz
-Output =  /uscms/home/bschneid/analysis/datasets/run13_test-full-run/friend_production_$(Cluster).stdout
-Error =  /uscms/home/bschneid/analysis/datasets/run13_test-full-run/friend_production_$(Cluster).stderr
-Log =  /uscms/home/bschneid/analysis/datasets/run13_test-full-run/friend_production_$(Cluster).condor
+Output =  /uscms/home/bschneid/analysis/datasets/run19_test-full-run/friend_production_$(Cluster).stdout
+Error =  /uscms/home/bschneid/analysis/datasets/run19_test-full-run/friend_production_$(Cluster).stderr
+Log =  /uscms/home/bschneid/analysis/datasets/run19_test-full-run/friend_production_$(Cluster).condor
 notification = Never
 x509userproxy = $ENV(X509_USER_PROXY)
-Arguments = RA4_7_4_14 root://eoscms.cern.ch/ /eos/cms/store/cmst3/group/susy/alobanov/MC/CMGtuples/MiniAODv2/Spring15_CBID/Skim_HT350_LooseLep/DYJetsToLL_M50_HT100to200 DYJetsToLL_M50_HT100to200 treeProducerSusySingleLepton /eos/uscms/store/user/bschneid/analysis/friends/run13_test-full-run 10000 1
+Arguments = RA4_7_4_14 root://eoscms.cern.ch/ /eos/cms/store/cmst3/group/susy/alobanov/MC/CMGtuples/MiniAODv2/Spring15_CBID/Skim_HT350_LooseLep/WJetsToLNu_HT800to1200 WJetsToLNu_HT800to1200 treeProducerSusySingleLepton /eos/uscms/store/user/bschneid/analysis/friends/run19_test-full-run 50000 21
 Queue 1
