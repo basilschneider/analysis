@@ -8,10 +8,49 @@ dir=~/analysis/datasets/
 out=output
 eos=root://eoscms.cern.ch//eos/cms/store/cmst3/group/susy/alobanov/MC/CMGtuples/MiniAODv2/Spring15_CBID/Skim_HT350_LooseLep/
 tree=treeProducerSusySingleLepton
+skip=(Friends)
+#skip+=(DYJetsToLL_M50_HT100to200)
+#skip+=(DYJetsToLL_M50_HT200to400)
+#skip+=(DYJetsToLL_M50_HT400to600)
+#skip+=(DYJetsToLL_M50_HT600toInf)
+#skip+=(QCD_HT1000to1500)
+#skip+=(QCD_HT1500to2000)
+#skip+=(QCD_HT2000toInf)
+#skip+=(QCD_HT300to500)
+#skip+=(QCD_HT500to700)
+#skip+=(QCD_HT700to1000)
+#skip+=(TBar_tWch)
+#skip+=(TBar_tWch_DS)
+#skip+=(TTJets_DiLepton_full)
+#skip+=(TTJets_LO)
+#skip+=(TTJets_LO_HT1200to2500)
+#skip+=(TTJets_LO_HT2500toInf)
+#skip+=(TTJets_LO_HT600to800)
+#skip+=(TTJets_LO_HT800to1200)
+#skip+=(TTJets_LO_pow)
+#skip+=(TTJets_SingleLeptonFromT_full)
+#skip+=(TTJets_SingleLeptonFromTbar_full)
+#skip+=(TTWToLNu)
+#skip+=(TTWToQQ)
+#skip+=(TTZToLLNuNu)
+#skip+=(TTZToQQ)
+#skip+=(TToLeptons_sch)
+#skip+=(TToLeptons_tch_amcatnlo)
+#skip+=(TToLeptons_tch_amcatnlo_ext)
+#skip+=(TToLeptons_tch_amcatnlo_full)
+#skip+=(T_tWch)
+#skip+=(T_tWch_DS)
+#skip+=(WJetsToLNu_HT100to200)
+#skip+=(WJetsToLNu_HT1200to2500)
+#skip+=(WJetsToLNu_HT200to400)
+#skip+=(WJetsToLNu_HT2500toInf)
+#skip+=(WJetsToLNu_HT400to600)
+#skip+=(WJetsToLNu_HT600to800)
+#skip+=(WJetsToLNu_HT800to1200)
+nEvts=10000
 condor=false
 verbose=false
 debug=false
-skip=(Friends)
 
 usage(){
     echo "Usage: $0 [option]"
@@ -100,6 +139,7 @@ produceFriends(){
 
     # Make output absolute, since we are changing directory later
     if [ "${out:0:1}" != "/" ]; then
+        cmd+=('eosout=/eos/uscms/store/user/bschneid/analysis/friends/${out}')
         cmd+=('out=${PWD}/${out}')
     fi
 
@@ -141,7 +181,7 @@ cmdCondor(){
 
     # Write info into file for condor processing
     cmdadd 'mkdir -p ${out};'
-    cmdadd 'echo ${eosSite} ${eosPath} ${sample} ${entries} >> ${f_condor};'
+    cmdadd 'echo ${eosSite} ${dataset} ${sample} ${entries} >> ${f_condor};'
 
     # Clean up
     cmdadd 'rm -rf ${tmp}/${sample};'
@@ -157,17 +197,42 @@ cmdCondor(){
     cmd+=('sed -i "s/^Log.*/Log = ')
     cmdadd '${out//\//\\/}\/friend_production_\$(Cluster).condor/" condor;'
 
+    # Create output directory on eos (don't know how to do that on the worker
+    # nodes)
+    cmd+=('eos root://cmseos.fnal.gov/ mkdir -p ${eosout}')
+
+    # Pack directory for submission
+    cmd+=('echo -n "Pack directory for submission... ";')
+    cmd+=('rm -f tarball.tar.gz;')
+    cmd+=('tar czf tarball.tar.gz -C ${CMSSW_BASE%/*}')
+    cmdadd '--exclude .git ${CMSSW_BASE##*/};'
+    cmd+=('echo Done.;')
+
     # Loop over condor file to submit jobs
-    cmd+=('while read line; do')
+    cmd+=('while read eosSite eosPath sample nEvtsTot; do')
+
+    # Get number of chunks
+    cmdadd 'chunks=$(( (${nEvtsTot}+${nEvts}-1)/${nEvts} ));'
+
+    # Loop over number of chunks
+    cmdadd 'for ((chunk=1; chunk<=${chunks}; ++chunk)); do'
 
     # Change condor submission script
-    cmdadd 'sed -i "s/^Arguments.*/Arguments = ${line//\//\\/}/" condor;'
+    cmdadd 'sed -i "s/^Arguments.*/Arguments ='
+    cmdadd '${CMSSW_BASE##*/}'
+    cmdadd '${eosSite//\//\\/}'
+    cmdadd '${eosPath//\//\\/}'
+    cmdadd '${sample//\//\\/}'
+    cmdadd '${tree//\//\\/}'
+    cmdadd '${eosout//\//\\/}'
+    cmdadd '${nEvts//\//\\/}'
+    cmdadd '${chunk//\//\\/}/" condor;'
 
-    # Submit job
+    # Send jobs, one for each chunk
     cmdadd 'condor_submit condor;'
 
-    ####### BREAK
-    cmdadd 'break;'
+    # End loop
+    cmdadd 'done;'
 
     # End loop
     cmdadd 'done < ${f_condor}'
@@ -189,7 +254,7 @@ cmdLocal(){
     cmdadd '('
     cmdadd 'cd ${CMSSW_BASE}/src/CMGTools/SUSYAnalysis/macros/;'
     cmdadd 'echo -n "Produce friend tree... ";'
-    cmdadd 'python prepareEventVariablesFriendTree.py -N 10000 -j 24 '
+    cmdadd 'python prepareEventVariablesFriendTree.py -N ${nEvts} -j 24 '
     cmdadd '${tmp} ${out}'
     pipeout
     cmdadd 'echo Done.;'

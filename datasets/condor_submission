@@ -2,6 +2,72 @@
 
 # Condor submission script to produce friend trees
 
+set -e -o pipefail
+
+cmssw="${1}"
+eosSite="${2}"
+dataset="${3}"
+sample="${4}"
+tree="${5}"
+out="${6}"
+nEvts="${7}"
+chunk="${8}"
+
+pwd="${PWD}"
+tmp="${pwd}"/tmp
+
 # Build directory structure that can be read by idiotic python script
-echo hello world
-#mkdir -p tmp/${sample}/${tree}
+echo Hello Condor
+echo
+
+echo "Date: " $(date)
+echo "Worker node: " $(uname -a)
+echo "Operating system: " $(cat /etc/redhat-release)
+echo
+
+echo CMSSW: "${cmssw}"
+echo eosSite: "${eosSite}"
+echo dataset: "${dataset}"
+echo sample: "${sample}"
+echo tree: "${tree}"
+echo out: "${out}"
+echo nEvts: "${nEvts}"
+echo chunk: "${chunk}"
+echo pwd: "${pwd}"
+
+# Set up CMSSW
+tar xf tarball.tar.gz
+cd "${cmssw}"
+scram b ProjectRename
+source /cvmfs/cms.cern.ch/cmsset_default.sh
+cd src
+eval `scramv1 runtime -sh`
+cd "${pwd}"
+
+# Subshell to download sample
+(
+    mkdir -p "${tmp}/${sample}/${tree}"
+    cd "${tmp}/${sample}/${tree}"
+    echo -n "Download sample from eos... "
+    xrdcp -s "${eosSite}${dataset}/${tree}/tree.root" .
+    echo "Done."
+)
+
+# Subshell to make friend trees
+(
+    cd ${cmssw}/src/CMGTools/SUSYAnalysis/macros/
+    echo "Produce friend tree... "
+    python prepareEventVariablesFriendTree.py \
+        -N "${nEvts}" \
+        -d "${sample}" \
+        -c "${chunk}" \
+        "${tmp}" "${pwd}"/"${out##*/}"
+)
+
+# Copy output to eos
+echo "Copy output to eos."
+for file in "${out##*/}"/*; do
+    xrdcp -fs "${file}" root://cmseos.fnal.gov/"${out}"
+done
+
+echo "Bye."
