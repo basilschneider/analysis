@@ -219,6 +219,9 @@ cmdCondor(){
     # Loop over condor file to submit jobs
     cmd+=('while read eosSite eosPath sample nEvtsTot; do')
 
+    # Skip samples by default
+    cmdadd 'if [[ "${skip[@]}" =~ "${sample}" ]]; then continue; fi;'
+
     # Get number of chunks
     cmdadd 'chunks=$(( (${nEvtsTot}+${nEvts}-1)/${nEvts} ));'
 
