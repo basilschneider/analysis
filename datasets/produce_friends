@@ -124,7 +124,7 @@ produceFriends(){
     cmd=()
 
     # Get list of trees
-    cmd+=('echo -n "Get datasets from eos... "')
+    cmd+=('echo -n "Get list of datasets from eos... "')
     cmd+=('datasets=$(xrdfs $eosSite ls $eosPath)')
     cmd+=('echo Done.')
 
@@ -160,18 +160,17 @@ cmdCondor(){
 
     # Get name of sample
     cmdadd 'sample=${dataset##*/};'
-    cmdadd 'echo Get information for ${sample}.;'
 
     # Check sample against list of samples that are skipped by default
     cmdadd 'if [[ "${skip[@]}" =~ "${sample}" ]]; then '
-    cmdadd 'echo Sample is skipped by default.; continue; fi;'
+    cmdadd 'echo Sample ${sample} is skipped by default.; continue; fi;'
 
     # If sample is already in condor file, skip
     cmdadd 'if grep -q ${sample} ${f_condor} 2>/dev/null; then '
-    cmdadd 'echo Sample already in condor file.; continue; fi;'
+    cmdadd 'echo Sample ${sample} already in condor file.; continue; fi;'
 
     # Get number of entries in tree
-    cmdadd 'echo -n "Get number of events... ";'
+    cmdadd 'echo -n "Get number of events for ${sample}... ";'
     cmdadd 'entries=$(python -c "from ToolboxHelper import \
         get_tree_entries_eos; print \
         get_tree_entries_eos(\"${eosSite}${dataset}/${tree}/tree.root\", \"tree\")");'
