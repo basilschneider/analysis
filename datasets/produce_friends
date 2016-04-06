@@ -189,6 +189,14 @@ cmdCondor(){
     # End loop
     cmdadd 'done'
 
+    # Calculate number of jobs
+    cmd+=('echo Got all necessary information.;')
+    cmd+=('noJobs=0;')
+    cmd+=('while read eosSite eosPath sample nEvtsTot; do')
+    cmdadd 'noJobs=$(( ${noJobs} + (${nEvtsTot}+${nEvts}-1)/${nEvts} ));'
+    cmdadd 'done < ${f_condor}'
+    cmd+=('echo Will send ${noJobs} jobs to condor.;')
+
     # Change output files of condor
     cmd+=('sed -i "s/^Output.*/Output = ')
     cmdadd '${out//\//\\/}\/friend_production_\$(Cluster).stdout/" condor;'
