@@ -244,6 +244,9 @@ cmdCondor(){
 
     # End loop
     cmdadd 'done < ${f_condor}'
+
+    # Report number of jobs again
+    cmd+=('echo Sent ${noJobs} jobs to condor.;')
 }
 
 # When running locally
