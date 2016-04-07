@@ -50,6 +50,7 @@ skip=(Friends)
 nEvts=50000
 condor=false
 verbose=false
+hadd=false
 debug=false
 
 usage(){
@@ -62,6 +63,7 @@ usage(){
     echo "-t                 Path to tree in eos directory (default: $tree)"
     echo "-c                 Run on condor (default: $condor)"
     echo "-v                 Be verbose"
+    echo "--hadd             hadd files on eos (default: $hadd)"
     echo "--debug            Debug messages (default: $debug)"
 }
 
@@ -70,6 +72,7 @@ parseOptions(){
     # Check for flags
     OPT=$(getopt \
         --options hco:d:e:v \
+        --long hadd \
         --long debug \
         --name "$0" \
         -- "$@"
@@ -93,6 +96,8 @@ parseOptions(){
                 shift 1;;
             -v) verbose=true
                 shift 1;;
+            --hadd) hadd=true
+                shift 1;;
             --debug) debug=true
                 shift 1;;
             --) shift
@@ -105,6 +110,10 @@ parseOptions(){
         usage
         exit 1
     fi
+
+    # After parsing all options, set path's
+    eosout=/eos/uscms/store/user/bschneid/analysis/friends/${out}
+    rootfiles=${out}/rootfiles.txt
 }
 
 parseEos(){
@@ -139,7 +148,6 @@ produceFriends(){
 
     # Make output absolute, since we are changing directory later
     if [ "${out:0:1}" != "/" ]; then
-        cmd+=('eosout=/eos/uscms/store/user/bschneid/analysis/friends/${out}')
         cmd+=('out=${PWD}/${out}')
     fi
 
@@ -152,6 +160,7 @@ produceFriends(){
 
 # When running on condor
 cmdCondor(){
+
     # File with info for condor
     f_condor=${out}/condor_info
 
@@ -239,7 +248,7 @@ cmdCondor(){
     # Write expected name of output file into text file
     cmdadd 'if [ ${chunks} -ne 1 ]; then'
     cmdadd 'chunkstr=.chunk$(printf "%05d\n" "${chunk}"); fi;'
-    cmdadd 'echo evVarFriend_${sample}${chunkstr}.root >> ${out}/rootfiles.txt;'
+    cmdadd 'echo evVarFriend_${sample}${chunkstr}.root >> ${rootfiles};'
 
     # Send jobs, one for each chunk
     cmdadd 'condor_submit condor;'
@@ -324,10 +333,29 @@ invokeCmd(){
     )
 }
 
+# hadd files on eos
+haddFiles(){
+    while read rootfile; do
+        fullpath="root://cmseos.fnal.gov/${eosout}/${rootfile}"
+        # Check for new sample
+        if [[ "${rootfile}" != *chunk* ]] || \
+           [[ "${rootfile}" == *chunk00000* ]]; then
+            cmd+=("hadd -f ${out}/${rootfile/.chunk00000/} ${fullpath}")
+        else
+            cmdadd "${fullpath}"
+        fi
+    done < ${rootfiles}
+}
+
 main(){
     parseOptions "$@"
     parseEos
-    produceFriends
+    # If hadd is true, we only hadd and ignore all other options
+    if [ "${hadd}" == true ]; then
+        haddFiles
+    else
+        produceFriends
+    fi
     invokeCmd
 }
 
