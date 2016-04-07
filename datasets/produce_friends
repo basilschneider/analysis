@@ -8,6 +8,13 @@ dir=~/analysis/datasets/
 out=output
 eos=root://eoscms.cern.ch//eos/cms/store/cmst3/group/susy/alobanov/MC/CMGtuples/MiniAODv2/Spring15_CBID/Skim_HT350_LooseLep/
 tree=treeProducerSusySingleLepton
+nEvts=50000
+condor=false
+verbose=false
+hadd=false
+debug=false
+dryrun=""
+
 skip=(Friends)
 #skip+=(DYJetsToLL_M50_HT100to200)
 #skip+=(DYJetsToLL_M50_HT200to400)
@@ -47,12 +54,6 @@ skip=(Friends)
 #skip+=(WJetsToLNu_HT400to600)
 #skip+=(WJetsToLNu_HT600to800)
 #skip+=(WJetsToLNu_HT800to1200)
-nEvts=50000
-condor=false
-verbose=false
-hadd=false
-debug=false
-dryrun=""
 
 usage(){
     echo "Usage: $0 [option]"
