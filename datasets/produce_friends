@@ -236,6 +236,11 @@ cmdCondor(){
     cmdadd '${nEvts//\//\\/}'
     cmdadd '${chunk//\//\\/}/" condor;'
 
+    # Write expected name of output file into text file
+    cmdadd 'if [ ${chunks} -ne 1 ]; then'
+    cmdadd 'chunkstr=.chunk$(printf "%05d\n" "${chunk}"); fi;'
+    cmdadd 'echo evVarFriend_${sample}${chunkstr}.root >> ${out}/rootfiles.txt;'
+
     # Send jobs, one for each chunk
     cmdadd 'condor_submit condor;'
 
@@ -311,7 +316,7 @@ invokeCmd(){
     # Invoke command(s) in subshell
     (
         for c in "${cmd[@]}"; do
-            if [ "$debug" == "true" ]; then
+            if [ "$debug" == true ]; then
                 echo "$c"
             fi
             eval "$c"
