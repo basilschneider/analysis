@@ -112,8 +112,9 @@ parseOptions(){
     fi
 
     # After parsing all options, set path's
-    eosout=/eos/uscms/store/user/bschneid/analysis/friends/${out}
-    rootfiles=${out}/rootfiles.txt
+    eosout=/eos/uscms/store/user/bschneid/analysis/friends/"${out}"
+    rootfiles="${out}"/rootfiles.txt
+    condorlogs="${out}"/logs/
 }
 
 parseEos(){
@@ -203,13 +204,16 @@ cmdCondor(){
     cmdadd 'done < ${f_condor}'
     cmd+=('echo Will send ${noJobs} jobs to condor.;')
 
+    # Create directory for condor logs
+    cmd+=('mkdir -p ${condorlogs}')
+
     # Change output files of condor
     cmd+=('sed -i "s/^Output.*/Output = ')
-    cmdadd '${out//\//\\/}\/friend_production_\$(Cluster).stdout/" condor;'
+    cmdadd '${condorlogs//\//\\/}\/friend_production_\$(Cluster).stdout/" condor;'
     cmd+=('sed -i "s/^Error.*/Error = ')
-    cmdadd '${out//\//\\/}\/friend_production_\$(Cluster).stderr/" condor;'
+    cmdadd '${condorlogs//\//\\/}\/friend_production_\$(Cluster).stderr/" condor;'
     cmd+=('sed -i "s/^Log.*/Log = ')
-    cmdadd '${out//\//\\/}\/friend_production_\$(Cluster).condor/" condor;'
+    cmdadd '${condorlogs//\//\\/}\/friend_production_\$(Cluster).condor/" condor;'
 
     # Create output directory on eos (don't know how to do that on the worker
     # nodes)
