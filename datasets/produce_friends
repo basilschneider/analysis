@@ -255,8 +255,10 @@ cmdCondor(){
     cmdadd '${chunk//\//\\/}/" condor;'
 
     # Write expected name of output file into text file
+    cmdadd 'echo nochunks: $chunks;'
     cmdadd 'if [ ${chunks} -ne 1 ]; then'
-    cmdadd 'chunkstr=.chunk$(printf "%05d\n" "${chunk}"); fi;'
+    cmdadd 'chunkstr=.chunk$(printf "%05d\n" "${chunk}");'
+    cmdadd 'else chunkstr=;fi;'
     cmdadd 'echo evVarFriend_${sample}${chunkstr}.root >> ${rootfiles};'
 
     # Send jobs, one for each chunk
