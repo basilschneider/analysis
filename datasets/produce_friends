@@ -52,6 +52,7 @@ condor=false
 verbose=false
 hadd=false
 debug=false
+dryrun=""
 
 usage(){
     echo "Usage: $0 [option]"
@@ -65,6 +66,7 @@ usage(){
     echo "-v                 Be verbose"
     echo "--hadd             hadd files on eos (default: $hadd)"
     echo "--debug            Debug messages (default: $debug)"
+    echo "--dryrun           Don't send jobs"
 }
 
 parseOptions(){
@@ -73,6 +75,7 @@ parseOptions(){
     OPT=$(getopt \
         --options hco:d:e:v \
         --long hadd \
+        --long dryrun \
         --long debug \
         --name "$0" \
         -- "$@"
@@ -97,6 +100,8 @@ parseOptions(){
             -v) verbose=true
                 shift 1;;
             --hadd) hadd=true
+                shift 1;;
+            --dryrun) dryrun="echo"
                 shift 1;;
             --debug) debug=true
                 shift 1;;
@@ -255,7 +260,7 @@ cmdCondor(){
     cmdadd 'echo evVarFriend_${sample}${chunkstr}.root >> ${rootfiles};'
 
     # Send jobs, one for each chunk
-    cmdadd 'condor_submit condor;'
+    cmdadd '${dryrun} condor_submit condor;'
 
     # End loop
     cmdadd 'done;'
@@ -283,7 +288,7 @@ cmdLocal(){
     cmdadd '('
     cmdadd 'cd ${CMSSW_BASE}/src/CMGTools/SUSYAnalysis/macros/;'
     cmdadd 'echo -n "Produce friend tree... ";'
-    cmdadd 'python prepareEventVariablesFriendTree.py -N ${nEvts} -j 24 '
+    cmdadd '${dryrun} python prepareEventVariablesFriendTree.py -N ${nEvts} -j 24 '
     cmdadd '${tmp} ${out}'
     pipeout
     cmdadd 'echo Done.;'
