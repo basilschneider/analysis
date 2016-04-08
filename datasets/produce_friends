@@ -6,7 +6,6 @@ set -e -o pipefail
 
 dir=~/analysis/datasets/
 out=output
-eos=root://eoscms.cern.ch//eos/cms/store/cmst3/group/susy/alobanov/MC/CMGtuples/MiniAODv2/Spring15_CBID/Skim_HT350_LooseLep/
 tree=treeProducerSusySingleLepton
 nEvts=50000
 condor=false
@@ -15,7 +14,9 @@ hadd=false
 debug=false
 dryrun=""
 
-skip=(Friends)
+# MC background
+#eos=root://eoscms.cern.ch//eos/cms/store/cmst3/group/susy/alobanov/MC/CMGtuples/MiniAODv2/Spring15_CBID/Skim_HT350_LooseLep/
+#skip=(Friends)
 #skip+=(DYJetsToLL_M50_HT100to200)
 #skip+=(DYJetsToLL_M50_HT200to400)
 #skip+=(DYJetsToLL_M50_HT400to600)
@@ -55,6 +56,15 @@ skip=(Friends)
 #skip+=(WJetsToLNu_HT600to800)
 #skip+=(WJetsToLNu_HT800to1200)
 
+# Data
+eos=root://eoscms.cern.ch//eos/cms/store/cmst3/group/susy/alobanov/Data/25ns/CMGtuples/Run2015D/MiniAODv2/JECv6recalibrateMET_2p2fb/Skimmed/trig_skim/
+skip+=(SingleElectron_Run2015D_05Oct)
+#skip+=(SingleElectron_Run2015D_v4)
+skip+=(SingleMuon_Run2015D_05Oct)
+#skip+=(SingleMuon_Run2015D_v4)
+skip+=(chunks)
+skip+=(lumis)
+
 usage(){
     echo "Usage: $0 [option]"
     echo "where [option] can be"
@@ -62,7 +72,7 @@ usage(){
     echo "-o output          Set name of output directory (default: $out)"
     echo "-d dir             Path to output directory (default: $dir)"
     echo "-e eos             Path to eos directory (default: $eos)"
-    echo "-t                 Path to tree in eos directory (default: $tree)"
+    echo "-t tree            Path to tree in eos directory (default: $tree)"
     echo "-c                 Run on condor (default: $condor)"
     echo "-v                 Be verbose"
     echo "--hadd             hadd files on eos (default: $hadd)"
@@ -256,7 +266,6 @@ cmdCondor(){
     cmdadd '${chunk//\//\\/}/" condor;'
 
     # Write expected name of output file into text file
-    cmdadd 'echo nochunks: $chunks;'
     cmdadd 'if [ ${chunks} -ne 1 ]; then'
     cmdadd 'chunkstr=.chunk$(printf "%05d\n" "${chunk}");'
     cmdadd 'else chunkstr=;fi;'
