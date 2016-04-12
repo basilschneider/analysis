@@ -36,15 +36,19 @@ echo chunk: "${chunk}"
 echo pwd: "${pwd}"
 
 # Set up CMSSW
+echo "Build CMSSW."
 tar xf tarball.tar.gz
 cd "${cmssw}"
 scram b ProjectRename
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 cd src
 eval `scramv1 runtime -sh`
+scram b clean
+scram b -j $(nproc)
 cd "${pwd}"
 
 # Subshell to download sample
+echo "Download sample."
 (
     mkdir -p "${tmp}/${sample}/${tree}"
     cd "${tmp}/${sample}/${tree}"
@@ -54,6 +58,7 @@ cd "${pwd}"
 )
 
 # Subshell to make friend trees
+echo "Make friend trees."
 (
     cd ${cmssw}/src/CMGTools/SUSYAnalysis/macros/
     echo "Produce friend tree... "
