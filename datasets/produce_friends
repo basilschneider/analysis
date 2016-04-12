@@ -224,12 +224,12 @@ cmdCondor(){
     cmd+=('mkdir -p ${condorlogs}')
 
     # Change output files of condor
-    cmd+=('sed -i "s/^Output.*/Output = ')
-    cmdadd '${condorlogs//\//\\/}\/friend_production_\$(Cluster).stdout/" condor;'
-    cmd+=('sed -i "s/^Error.*/Error = ')
-    cmdadd '${condorlogs//\//\\/}\/friend_production_\$(Cluster).stderr/" condor;'
-    cmd+=('sed -i "s/^Log.*/Log = ')
-    cmdadd '${condorlogs//\//\\/}\/friend_production_\$(Cluster).condor/" condor;'
+    cmd+=('sed -i "s/^Output.*/Output =')
+    cmdadd '${condorlogs//\//\\/}\/friend_production_\$(Cluster).stdout/" condor_friends_submission;'
+    cmd+=('sed -i "s/^Error.*/Error =')
+    cmdadd '${condorlogs//\//\\/}\/friend_production_\$(Cluster).stderr/" condor_friends_submission;'
+    cmd+=('sed -i "s/^Log.*/Log =')
+    cmdadd '${condorlogs//\//\\/}\/friend_production_\$(Cluster).condor/" condor_friends_submission;'
 
     # Create output directory on eos (don't know how to do that on the worker
     # nodes)
@@ -263,7 +263,7 @@ cmdCondor(){
     cmdadd '${tree//\//\\/}'
     cmdadd '${eosout//\//\\/}'
     cmdadd '${nSplitEvts//\//\\/}'
-    cmdadd '${chunk//\//\\/}/" condor;'
+    cmdadd '${chunk//\//\\/}/" condor_friends_submission;'
 
     # Write expected name of output file into text file
     cmdadd 'if [ ${chunks} -ne 1 ]; then'
@@ -272,7 +272,7 @@ cmdCondor(){
     cmdadd 'echo evVarFriend_${sample}${chunkstr}.root >> ${rootfiles};'
 
     # Send jobs, one for each chunk
-    cmdadd '${dryrun} condor_submit condor;'
+    cmdadd '${dryrun} condor_submit condor_friends_submission;'
 
     # End loop
     cmdadd 'done;'
