@@ -6,8 +6,9 @@ set -e -o pipefail
 
 dir=~/analysis/datasets/
 out=output
-tree=treeProducerSusySingleLepton
 nEvts=-1
+nSplitEvts=50000
+sample=TTJets_LO
 condor=false
 debug=false
 
@@ -17,8 +18,10 @@ usage(){
     echo "-h                 Show this help"
     echo "-o output          Set name of output directory (default: $out)"
     echo "-d dir             Path to output directory (default: $dir)"
-    echo "-t tree            Path to tree in eos directory (default: $tree)"
     echo "-n N               Process N events (default: $nEvts)"
+    echo "-s sample          Run over sample (default: $sample)"
+    echo "                   See samples for a list of samples"
+    echo "                   Use \"all\" to run over all samples"
     echo "-c                 Run on condor (default: $condor)"
     echo "--debug            Debug messages (default: $debug)"
 }
@@ -28,7 +31,7 @@ parseOptions(){
 
     # Check for flags
     OPT=$(getopt \
-        --options ho:d:t:n:c \
+        --options ho:d:n:s:c \
         --long debug \
         --name "$0" \
         -- "$@"
@@ -44,9 +47,9 @@ parseOptions(){
                 shift 2;;
             -d) dir="${2}"
                 shift 2;;
-            -t) tree="${2}"
-                shift 2;;
             -n) nEvts="${2}"
+                shift 2;;
+            -s) sample="${2}"
                 shift 2;;
             -c) condor=true
                 shift 1;;
@@ -65,7 +68,6 @@ parseOptions(){
 }
 
 produceTrees(){
-
     # Commands to be executed later
     cmd=()
 
@@ -77,11 +79,29 @@ produceTrees(){
 }
 
 cmdLocal(){
+    # Report what you are doing
+    cmd+=('echo Run locally, only over first file in sample.')
+    cmd+=('echo This is used for testing and debugging.')
+
+    # Define path to configfile
+    cmd+=('cfgfile=${CMSSW_BASE}/src/CMGTools/SUSYAnalysis/cfg/')
+    cmd+=('cfgfile+=run_susySingleLepton_v2_cfg.py')
+
+    # Modify config file
+    cmd+=('sed -i "/sedAnchor03/s/comp = [^ ]*/comp = ${sample}/" ${cfgfile}')
     cmd+=('cd ${CMSSW_BASE}/src/CMGTools/SUSYAnalysis/cfg/')
+
+    # Run
     cmd+=('heppy ${dir}/${out} run_susySingleLepton_v2_cfg.py -p 0 -f')
+    # If the variable is set, run only over ${nEvts} events
     if [ ${nEvts} -ge 0 ]; then
         cmdadd '-N ${nEvts}'
     fi
+}
+
+cmdCondor(){
+    # Get info about sample(s)
+    echo "Not yet implemented"
 }
 
 # Append to last cmd entry
