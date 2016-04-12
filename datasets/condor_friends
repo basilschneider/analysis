@@ -34,6 +34,7 @@ echo out: "${out}"
 echo nEvts: "${nEvts}"
 echo chunk: "${chunk}"
 echo pwd: "${pwd}"
+echo
 
 # Set up CMSSW
 echo "Build CMSSW."
@@ -43,8 +44,6 @@ scram b ProjectRename
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 cd src
 eval `scramv1 runtime -sh`
-scram b clean
-scram b -j $(nproc)
 cd "${pwd}"
 
 # Subshell to download sample
