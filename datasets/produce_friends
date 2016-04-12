@@ -7,7 +7,7 @@ set -e -o pipefail
 dir=~/analysis/datasets/
 out=output
 tree=treeProducerSusySingleLepton
-nEvts=50000
+nSplitEvts=50000
 condor=false
 verbose=false
 hadd=false
@@ -215,8 +215,8 @@ cmdCondor(){
     # Calculate number of jobs
     cmd+=('echo Got all necessary information.;')
     cmd+=('noJobs=0;')
-    cmd+=('while read eosSite eosPath sample nEvtsTot; do')
-    cmdadd 'noJobs=$(( ${noJobs} + (${nEvtsTot}+${nEvts}-1)/${nEvts} ));'
+    cmd+=('while read eosSite eosPath sample nSplitEvtsTot; do')
+    cmdadd 'noJobs=$(( ${noJobs} + (${nSplitEvtsTot}+${nSplitEvts}-1)/${nSplitEvts} ));'
     cmdadd 'done < ${f_condor}'
     cmd+=('echo Will send ${noJobs} jobs to condor.;')
 
@@ -243,13 +243,13 @@ cmdCondor(){
     cmd+=('echo Done.;')
 
     # Loop over condor file to submit jobs
-    cmd+=('while read eosSite eosPath sample nEvtsTot; do')
+    cmd+=('while read eosSite eosPath sample nSplitEvtsTot; do')
 
     # Skip samples by default
     cmdadd 'if [[ "${skip[@]}" =~ "${sample}" ]]; then continue; fi;'
 
     # Get number of chunks
-    cmdadd 'chunks=$(( (${nEvtsTot}+${nEvts}-1)/${nEvts} ));'
+    cmdadd 'chunks=$(( (${nSplitEvtsTot}+${nSplitEvts}-1)/${nSplitEvts} ));'
 
     # Loop over number of chunks
     cmdadd 'for ((chunk=0; chunk<${chunks}; ++chunk)); do'
@@ -262,7 +262,7 @@ cmdCondor(){
     cmdadd '${sample//\//\\/}'
     cmdadd '${tree//\//\\/}'
     cmdadd '${eosout//\//\\/}'
-    cmdadd '${nEvts//\//\\/}'
+    cmdadd '${nSplitEvts//\//\\/}'
     cmdadd '${chunk//\//\\/}/" condor;'
 
     # Write expected name of output file into text file
@@ -300,7 +300,7 @@ cmdLocal(){
     cmdadd '('
     cmdadd 'cd ${CMSSW_BASE}/src/CMGTools/SUSYAnalysis/macros/;'
     cmdadd 'echo -n "Produce friend tree... ";'
-    cmdadd '${dryrun} python prepareEventVariablesFriendTree.py -N ${nEvts} -j 24 '
+    cmdadd '${dryrun} python prepareEventVariablesFriendTree.py -N ${nSplitEvts} -j 24 '
     cmdadd '${tmp} ${out}'
     pipeout
     cmdadd 'echo Done.;'
