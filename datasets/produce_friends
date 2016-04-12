@@ -15,8 +15,8 @@ debug=false
 dryrun=""
 
 # MC background
-#eos=root://eoscms.cern.ch//eos/cms/store/cmst3/group/susy/alobanov/MC/CMGtuples/MiniAODv2/Spring15_CBID/Skim_HT350_LooseLep/
-#skip=(Friends)
+eos=root://eoscms.cern.ch//eos/cms/store/cmst3/group/susy/alobanov/MC/CMGtuples/MiniAODv2/Spring15_CBID/HT350_1nLep_LT200_hadrFlav
+skip=(Friends)
 #skip+=(DYJetsToLL_M50_HT100to200)
 #skip+=(DYJetsToLL_M50_HT200to400)
 #skip+=(DYJetsToLL_M50_HT400to600)
@@ -57,13 +57,13 @@ dryrun=""
 #skip+=(WJetsToLNu_HT800to1200)
 
 # Data
-eos=root://eoscms.cern.ch//eos/cms/store/cmst3/group/susy/alobanov/Data/25ns/CMGtuples/Run2015D/MiniAODv2/JECv6recalibrateMET_2p2fb/Skimmed/trig_skim/
-skip+=(SingleElectron_Run2015D_05Oct)
+#eos=root://eoscms.cern.ch//eos/cms/store/cmst3/group/susy/alobanov/Data/25ns/CMGtuples/Run2015D/MiniAODv2/JECv6recalibrateMET_2p2fb/Skimmed/trig_skim/
+#skip+=(SingleElectron_Run2015D_05Oct)
 #skip+=(SingleElectron_Run2015D_v4)
-skip+=(SingleMuon_Run2015D_05Oct)
+#skip+=(SingleMuon_Run2015D_05Oct)
 #skip+=(SingleMuon_Run2015D_v4)
-skip+=(chunks)
-skip+=(lumis)
+#skip+=(chunks)
+#skip+=(lumis)
 
 usage(){
     echo "Usage: $0 [option]"
