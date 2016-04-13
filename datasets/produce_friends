@@ -216,6 +216,7 @@ cmdCondor(){
     cmd+=('echo Got all necessary information.;')
     cmd+=('noJobs=0;')
     cmd+=('while read eosSite eosPath sample nSplitEvtsTot; do')
+    cmdadd 'if [[ "${skip[@]}" =~ "${sample}" ]]; then continue; fi;'
     cmdadd 'noJobs=$(( ${noJobs} + (${nSplitEvtsTot}+${nSplitEvts}-1)/${nSplitEvts} ));'
     cmdadd 'done < ${f_condor}'
     cmd+=('echo Will send ${noJobs} jobs to condor.;')
