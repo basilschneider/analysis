@@ -271,8 +271,25 @@ cmdCondor(){
     cmdadd 'else chunkstr=;fi;'
     cmdadd 'echo evVarFriend_${sample}${chunkstr}.root >> ${rootfiles};'
 
-    # Send jobs, one for each chunk
-    cmdadd '${dryrun} condor_submit condor_friends_submission;'
+    # To capture the job id but still print it to stdout, we need an additional
+    # file descriptor, pointing to stdout
+    cmdadd 'exec 3>&1;'
+
+    # Send jobs, one for each chunk, tee output to stdout and to fd3
+    cmdadd 'jobID=$(${dryrun} condor_submit condor_friends_submission'
+    cmdadd '| tee /dev/fd/3);'
+
+    # Close fd3
+    cmdadd 'exec 3>&-;'
+
+    # Extract job ID
+    cmdadd 'if [ -z "${dryrun}" ]; then'
+    cmdadd 'jobID=$(grep -o "[0-9]\{4,\}" <<< "${jobID}");'
+    cmdadd 'else jobID=999999; fi;'
+
+    # Copy condor file to logs file, for later resubmission if needed
+    cmdadd 'cp condor_friends_submission'
+    cmdadd '${condorlogs}/condor_friends_submission_${jobID};'
 
     # End loop
     cmdadd 'done;'
