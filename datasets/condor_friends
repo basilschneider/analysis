@@ -20,9 +20,9 @@ tmp="${pwd}"/tmp
 echo Hello Condor
 echo
 
-echo "Date: " $(date)
-echo "Worker node: " $(uname -a)
-echo "Operating system: " $(cat /etc/redhat-release)
+echo "Date:" $(date)
+echo "Worker node:" $(uname -a)
+echo "Operating system:" $(cat /etc/redhat-release)
 echo
 
 echo CMSSW: "${cmssw}"
@@ -43,7 +43,7 @@ cd "${cmssw}"
 scram b ProjectRename
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 cd src
-eval `scramv1 runtime -sh`
+eval $(scram runtime -sh)
 cd "${pwd}"
 
 # Subshell to download sample
