@@ -6,10 +6,5 @@ request_memory = 5000
 Should_Transfer_Files = YES
 WhenToTransferOutput = ON_EXIT_OR_EVICT
 Transfer_Input_Files = condor_friends, tarball.tar.gz
-Output =  friends_run31-new-eos/logs//friend_production_$(Cluster).stdout
-Error =  friends_run31-new-eos/logs//friend_production_$(Cluster).stderr
-Log =  friends_run31-new-eos/logs//friend_production_$(Cluster).condor
 notification = Never
 x509userproxy = $ENV(X509_USER_PROXY)
-Arguments = RA4_7_4_14 root://eoscms.cern.ch/ /eos/cms/store/cmst3/group/susy/alobanov/MC/CMGtuples/MiniAODv2/Spring15_CBID/HT350_1nLep_LT200_hadrFlav/WJetsToLNu_HT800to1200 WJetsToLNu_HT800to1200 treeProducerSusySingleLepton /eos/uscms/store/user/bschneid/analysis/friends/friends_run31-new-eos 50000 6
-Queue 1

@@ -130,7 +130,7 @@ parseOptions(){
     # After parsing all options, set path's
     eosout=/eos/uscms/store/user/bschneid/analysis/friends/"${out}"
     rootfiles="${out}"/rootfiles.txt
-    condorlogs="${out}"/logs/
+    condorlogs="${out}"/logs
 }
 
 parseEos(){
@@ -224,14 +224,6 @@ cmdCondor(){
     # Create directory for condor logs
     cmd+=('mkdir -p ${condorlogs}')
 
-    # Change output files of condor
-    cmd+=('sed -i "s/^Output.*/Output =')
-    cmdadd '${condorlogs//\//\\/}\/friend_production_\$(Cluster).stdout/" condor_friends_submission;'
-    cmd+=('sed -i "s/^Error.*/Error =')
-    cmdadd '${condorlogs//\//\\/}\/friend_production_\$(Cluster).stderr/" condor_friends_submission;'
-    cmd+=('sed -i "s/^Log.*/Log =')
-    cmdadd '${condorlogs//\//\\/}\/friend_production_\$(Cluster).condor/" condor_friends_submission;'
-
     # Create output directory on eos (don't know how to do that on the worker
     # nodes)
     cmd+=('eos root://cmseos.fnal.gov/ mkdir -p ${eosout}')
@@ -246,6 +238,21 @@ cmdCondor(){
     # Loop over condor file to submit jobs
     cmd+=('while read eosSite eosPath sample nSplitEvtsTot; do')
 
+    # Copy condor submission template
+    cmdadd 'rm -f condor_friends_submission_temp;'
+    cmdadd 'cp condor_friends_submission{,_temp};'
+
+    # Append output files to condor script
+    cmdadd 'echo "Output ='
+    cmdadd '${condorlogs}/friend_production_\$(Cluster).\$(Process).stdout"'
+    cmdadd '>> condor_friends_submission_temp;'
+    cmdadd 'echo "Error ='
+    cmdadd '${condorlogs}/friend_production_\$(Cluster).\$(Process).stderr"'
+    cmdadd '>> condor_friends_submission_temp;'
+    cmdadd 'echo "Log ='
+    cmdadd '${condorlogs}/friend_production_\$(Cluster).\$(Process).condor"'
+    cmdadd '>> condor_friends_submission_temp;'
+
     # Skip samples by default
     cmdadd 'if [[ "${skip[@]}" =~ "${sample}" ]]; then continue; fi;'
 
@@ -255,16 +262,11 @@ cmdCondor(){
     # Loop over number of chunks
     cmdadd 'for ((chunk=0; chunk<${chunks}; ++chunk)); do'
 
-    # Change condor submission script
-    cmdadd 'sed -i "s/^Arguments.*/Arguments ='
-    cmdadd '${CMSSW_BASE##*/}'
-    cmdadd '${eosSite//\//\\/}'
-    cmdadd '${eosPath//\//\\/}'
-    cmdadd '${sample//\//\\/}'
-    cmdadd '${tree//\//\\/}'
-    cmdadd '${eosout//\//\\/}'
-    cmdadd '${nSplitEvts//\//\\/}'
-    cmdadd '${chunk//\//\\/}/" condor_friends_submission;'
+    # Append arguments to condor script
+    cmdadd 'echo "Arguments = '
+    cmdadd '${CMSSW_BASE##*/} ${eosSite} ${eosPath} ${sample} ${tree}'
+    cmdadd '${eosout} ${nSplitEvts} ${chunk}" >> condor_friends_submission_temp;'
+    cmdadd 'echo "Queue 1" >> condor_friends_submission_temp;'
 
     # Write expected name of output file into text file
     cmdadd 'if [ ${chunks} -ne 1 ]; then'
@@ -272,12 +274,15 @@ cmdCondor(){
     cmdadd 'else chunkstr=;fi;'
     cmdadd 'echo evVarFriend_${sample}${chunkstr}.root >> ${rootfiles};'
 
+    # End loop
+    cmdadd 'done;'
+
     # To capture the job id but still print it to stdout, we need an additional
     # file descriptor, pointing to stdout
     cmdadd 'exec 3>&1;'
 
     # Send jobs, one for each chunk, tee output to stdout and to fd3
-    cmdadd 'jobID=$(${dryrun} condor_submit condor_friends_submission'
+    cmdadd 'jobID=$(${dryrun} condor_submit condor_friends_submission_temp'
     cmdadd '| tee /dev/fd/3);'
 
     # Close fd3
@@ -289,14 +294,11 @@ cmdCondor(){
     cmdadd 'else jobID=999999; fi;'
 
     # Copy condor file to logs file, for later resubmission if needed
-    cmdadd 'cp condor_friends_submission'
+    cmdadd 'mv condor_friends_submission_temp'
     cmdadd '${condorlogs}/condor_friends_submission_${jobID};'
 
     # End loop
-    cmdadd 'done;'
-
-    # End loop
-    cmdadd 'done < ${f_condor}'
+    cmdadd 'done < ${f_condor};'
 
     # Report number of jobs again
     cmd+=('echo Sent ${noJobs} jobs to condor.;')
