@@ -142,7 +142,7 @@ cmdCondor(){
     cmdadd 'condor_trees_submission;'
 
     # Pack directory for submission
-    cmd+=('echo -n "Pack directory for submission... ";')
+    cmd+=('echo -n "Pack directories for submission... ";')
     cmd+=('rm -f tarball.tar.gz;')
     cmd+=('tar czf tarball.tar.gz -C ${CMSSW_BASE%/*}')
     cmdadd '--exclude .git ${CMSSW_BASE##*/};'
@@ -156,25 +156,42 @@ cmdCondor(){
     # Report number of jobs
     cmd+=('echo Will send ${noJobs} jobs to condor.;')
 
+    # Copy condor submission template
+    cmdadd 'rm -f condor_trees_submission_temp;'
+    cmdadd 'cp condor_trees_submission{,_temp};'
+
+    # Append output files to condor script
+    cmdadd 'echo "Output ='
+    cmdadd '${condorlogs}/tree_production_\$(Cluster).\$(Process).stdout"'
+    cmdadd '>> condor_trees_submission_temp;'
+    cmdadd 'echo "Error ='
+    cmdadd '${condorlogs}/tree_production_\$(Cluster).\$(Process).stderr"'
+    cmdadd '>> condor_trees_submission_temp;'
+    cmdadd 'echo "Log ='
+    cmdadd '${condorlogs}/tree_production_\$(Cluster).\$(Process).condor"'
+    cmdadd '>> condor_trees_submission_temp;'
+
     # Loop over number of chunks
     cmd+=('for ((chunk=0; chunk<${chunks}; ++chunk)); do')
 
     # Modify config file
     cmdadd 'sed -i "/sedAnchor04/s/[0-9]\+/${chunk}/" ${cfgfile};'
 
-    # Change condor submission script
-    cmdadd 'sed -i "s/^Arguments.*/Arguments ='
-    cmdadd '${CMSSW_BASE##*/}'
-    cmdadd '${eosout//\//\\/}'
-    cmdadd '${nEvts//\//\\/}'
-    cmdadd '${chunk//\//\\/}/" condor_trees_submission;'
+    # Append arguments to condor script
+    cmdadd 'echo "Arguments = '
+    cmdadd '${CMSSW_BASE##*/} ${eosout} ${nEvts} ${chunk}"'
+    cmdadd '>> condor_trees_submission_temp;'
+    cmdadd 'echo "Queue 1" >> condor_trees_submission_temp;'
+
+    # End loop
+    cmdadd 'done;'
 
     # To capture the job id but still print it to stdout, we need an additional
     # file descriptor, pointing to stdout
     cmdadd 'exec 3>&1;'
 
     # Send jobs, one for each chunk, tee output to stdout and to fd3
-    cmdadd 'jobID=$(${dryrun} condor_submit condor_trees_submission'
+    cmdadd 'jobID=$(${dryrun} condor_submit condor_trees_submission_temp'
     cmdadd '| tee /dev/fd/3);'
 
     # Close fd3
@@ -186,11 +203,8 @@ cmdCondor(){
     cmdadd 'else jobID=999999; fi;'
 
     # Copy condor file to logs file, for later resubmission if needed
-    cmdadd 'cp condor_trees_submission'
+    cmdadd 'mv condor_trees_submission_temp'
     cmdadd '${condorlogs}/condor_trees_submission_${jobID};'
-
-    # End loop
-    cmdadd 'done;'
 
     # Report number of jobs again
     cmd+=('echo Sent ${noJobs} jobs to condor.;')

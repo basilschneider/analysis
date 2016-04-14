@@ -48,6 +48,10 @@ tar xf tarball_cmgdataset.tar.gz
 # Need to set HOME variable for caching of CMG datasets
 HOME="${pwd}"
 
+### HACK
+exit 1
+### HACK
+
 # Run heppy in subshell
 echo "Run heppy."
 cd ${CMSSW_BASE}/src/CMGTools/SUSYAnalysis/cfg/
