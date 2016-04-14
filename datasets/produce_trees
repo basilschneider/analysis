@@ -116,10 +116,12 @@ cmdCondor(){
     cmdadd 'echo Exit.; exit; fi'
 
     # Get number of files for sample
+    cmd+=('noJobs=0')
     cmd+=('echo -n "Get number of files for ${sample}... "')
     cmd+=('chunks=$(das_client.py --query="summary dataset=${samplestr}"')
     cmdadd '--key /tmp/x509up_u${UID} --cert /tmp/x509up_u${UID}'
     cmdadd '| awk "/nfiles/ {print \$3}")'
+    cmd+=('noJobs=$(( ${noJobs} + ${chunks} ))')
     cmd+=('echo $chunks')
 
     # Modify config file
@@ -148,6 +150,9 @@ cmdCondor(){
     cmd+=('tar czf tarball_caf.tar.gz --transform "s/python/caf/"')
     cmdadd '-C /afs/cern.ch/cms/caf python;'
     cmd+=('echo Done.;')
+
+    # Report number of jobs
+    cmd+=('echo Will send ${noJobs} jobs to condor.;')
 
     # Loop over number of chunks
     cmd+=('for ((chunk=0; chunk<${chunks}; ++chunk)); do')
@@ -184,6 +189,8 @@ cmdCondor(){
     # End loop
     cmdadd 'done;'
 
+    # Report number of jobs again
+    cmd+=('echo Sent ${noJobs} jobs to condor.;')
 }
 
 # Append to last cmd entry
