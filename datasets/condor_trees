@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+
+# Condor submission script to produce friend trees
+
+set -e -o pipefail
+
+cmssw="${1}"
+out="${2}"
+chunk="${3}"
+
+pwd="${PWD}"
+tmp="${PWD}"/tmp
+
+echo Hello Condor
+echo
+
+echo "Date:" $(date)
+echo "Worker node:" $(uname -a)
+echo "Operating system:" $(cat /etc/redhat-release)
+echo
+
+echo CMSSW: "${cmssw}"
+echo out: "${out}"
+echo chunk: "${chunk}"
+echo pwd: "${pwd}"
+echo
+
+# Set up CMSSW
+echo "Build CMSSW."
+tar xf tarball.tar.gz
+cd "${cmssw}"
+scram b ProjectRename
+source /cvmfs/cms.cern.ch/cmsset_default.sh
+cd src
+eval $(scram runtime -sh)
+cd "${pwd}"
+
+# Set up CAF
+echo "Set up CAF."
+tar xf tarball_caf.tar.gz
+PYTHONPATH="${PYTHONPATH}:${pwd}/caf/"
+
+### HACK
+echo $PYTHONPATH
+ls -l ./caf
+### HACK
+
+# Need to set HOME variable for caching of CMG datasets
+HOME="${pwd}"
+
+# Run heppy in subshell
+echo "Run heppy."
+cd ${CMSSW_BASE}/src/CMGTools/SUSYAnalysis/cfg/
+heppy ${tmp} run_susySingleLepton_v2_cfg.py -p 0 -f -t
+cd "${pwd}"
+
+# Copy output to eos
+echo "Copy output to eos."
+for file in "${out##*/}"/*; do
+    xrdcp -fs "${file}" root://cmseos.fnal.gov/"${out}"
+done
+
+echo "Bye."

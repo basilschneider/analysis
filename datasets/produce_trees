@@ -11,6 +11,7 @@ nSplitEvts=50000
 sample=TTJets_LO
 condor=false
 debug=false
+dryrun=""
 
 usage(){
     echo "Usage: $0 [option]"
@@ -24,6 +25,7 @@ usage(){
     echo "                   Use \"all\" to run over all samples"
     echo "-c                 Run on condor (default: $condor)"
     echo "--debug            Debug messages (default: $debug)"
+    echo "--dryrun           Don't send jobs"
 }
 
 
@@ -33,6 +35,7 @@ parseOptions(){
     OPT=$(getopt \
         --options ho:d:n:s:c \
         --long debug \
+        --long dryrun \
         --name "$0" \
         -- "$@"
     )
@@ -55,6 +58,8 @@ parseOptions(){
                 shift 1;;
             --debug) debug=true
                 shift 1;;
+            --dryrun) dryrun="echo"
+                shift 1;;
             --) shift
                 break;;
         esac
@@ -65,6 +70,12 @@ parseOptions(){
         usage
         exit 1
     fi
+
+    # After parsing all options, set path's
+    cfgfile=${CMSSW_BASE}/src/CMGTools/SUSYAnalysis/cfg/
+    cfgfile+=run_susySingleLepton_v2_cfg.py
+    eosout=/eos/uscms/store/user/bschneid/analysis/trees/"${out}"
+    condorlogs="${out}"/logs/
 }
 
 produceTrees(){
@@ -83,16 +94,12 @@ cmdLocal(){
     cmd+=('echo Run locally, only over first file in sample.')
     cmd+=('echo This is used for testing and debugging.')
 
-    # Define path to configfile
-    cmd+=('cfgfile=${CMSSW_BASE}/src/CMGTools/SUSYAnalysis/cfg/')
-    cmd+=('cfgfile+=run_susySingleLepton_v2_cfg.py')
-
     # Modify config file
     cmd+=('sed -i "/sedAnchor03/s/comp = [^ ]*/comp = ${sample}/" ${cfgfile}')
     cmd+=('cd ${CMSSW_BASE}/src/CMGTools/SUSYAnalysis/cfg/')
 
     # Run
-    cmd+=('heppy ${dir}/${out} run_susySingleLepton_v2_cfg.py -p 0 -f')
+    cmd+=('${dryrun} heppy ${dir}/${out} run_susySingleLepton_v2_cfg.py -p 0 -f')
     # If the variable is set, run only over ${nEvts} events
     if [ ${nEvts} -ge 0 ]; then
         cmdadd '-N ${nEvts}'
@@ -101,7 +108,82 @@ cmdLocal(){
 
 cmdCondor(){
     # Get info about sample(s)
-    echo "Not yet implemented"
+    cmd+=('echo Get info about requested sample')
+    cmd+=('samplestr=$(awk "/\<${sample}\>/ { print \$2 }" samples)')
+
+    # Check if sample was found
+    cmd+=('if [[ -z ${samplestr} ]]; then echo Sample $sample not found.;')
+    cmdadd 'echo Exit.; exit; fi'
+
+    # Get number of files for sample
+    cmd+=('echo -n "Get number of files for ${sample}... "')
+    cmd+=('chunks=$(das_client.py --query="summary dataset=${samplestr}"')
+    cmdadd '--key /tmp/x509up_u${UID} --cert /tmp/x509up_u${UID}'
+    cmdadd '| awk "/nfiles/ {print \$3}")'
+    cmd+=('echo $chunks')
+
+    # Modify config file
+    cmd+=('sed -i "/sedAnchor03/s/comp = [^ ]*/comp = ${sample}/" ${cfgfile}')
+
+    # Create directory for condor logs
+    cmd+=('mkdir -p ${condorlogs}')
+
+    # Change output files of condor
+    cmd+=('sed -i "s/^Output.*/Output =')
+    cmdadd '${condorlogs//\//\\/}\/tree_production_\$(Cluster).stdout/"'
+    cmdadd 'condor_trees_submission;'
+    cmd+=('sed -i "s/^Error.*/Error =')
+    cmdadd '${condorlogs//\//\\/}\/tree_production_\$(Cluster).stderr/"'
+    cmdadd 'condor_trees_submission;'
+    cmd+=('sed -i "s/^Log.*/Log =')
+    cmdadd '${condorlogs//\//\\/}\/tree_production_\$(Cluster).condor/"'
+    cmdadd 'condor_trees_submission;'
+
+    # Pack directory for submission
+    cmd+=('echo -n "Pack directory for submission... ";')
+    cmd+=('rm -f tarball.tar.gz;')
+    cmd+=('tar czf tarball.tar.gz -C ${CMSSW_BASE%/*}')
+    cmdadd '--exclude .git ${CMSSW_BASE##*/};'
+    cmd+=('rm -rf tarball_caf.tar.gz;')
+    cmd+=('tar czf tarball_caf.tar.gz --transform "s/python/caf/"')
+    cmdadd '-C /afs/cern.ch/cms/caf python;'
+    cmd+=('echo Done.;')
+
+    # Loop over number of chunks
+    cmd+=('for ((chunk=0; chunk<${chunks}; ++chunk)); do')
+
+    # Modify config file
+    cmdadd 'sed -i "/sedAnchor04/s/[0-9]\+/${chunk}/" ${cfgfile};'
+
+    # Change condor submission script
+    cmdadd 'sed -i "s/^Arguments.*/Arguments ='
+    cmdadd '${CMSSW_BASE##*/}'
+    cmdadd '${eosout//\//\\/}'
+    cmdadd '${chunk//\//\\/}/" condor_trees_submission;'
+
+    # To capture the job id but still print it to stdout, we need an additional
+    # file descriptor, pointing to stdout
+    cmdadd 'exec 3>&1;'
+
+    # Send jobs, one for each chunk, tee output to stdout and to fd3
+    cmdadd 'jobID=$(${dryrun} condor_submit condor_trees_submission'
+    cmdadd '| tee /dev/fd/3);'
+
+    # Close fd3
+    cmdadd 'exec 3>&-;'
+
+    # Extract job ID
+    cmdadd 'if [ -z "${dryrun}" ]; then'
+    cmdadd 'jobID=$(grep -o "[0-9]\{4,\}" <<< "${jobID}");'
+    cmdadd 'else jobID=999999; fi;'
+
+    # Copy condor file to logs file, for later resubmission if needed
+    cmdadd 'cp condor_trees_submission'
+    cmdadd '${condorlogs}/condor_trees_submission_${jobID};'
+
+    # End loop
+    cmdadd 'done;'
+
 }
 
 # Append to last cmd entry
