@@ -6,7 +6,8 @@ set -e -o pipefail
 
 cmssw="${1}"
 out="${2}"
-chunk="${3}"
+nEvts="${3}"
+chunk="${4}"
 
 pwd="${PWD}"
 tmp="${PWD}"/tmp
@@ -21,6 +22,7 @@ echo
 
 echo CMSSW: "${cmssw}"
 echo out: "${out}"
+echo nEvts: "${nEvts}"
 echo chunk: "${chunk}"
 echo pwd: "${pwd}"
 echo
@@ -46,7 +48,11 @@ HOME="${pwd}"
 # Run heppy in subshell
 echo "Run heppy."
 cd ${CMSSW_BASE}/src/CMGTools/SUSYAnalysis/cfg/
-heppy ${tmp} run_susySingleLepton_v2_cfg.py -p 0 -f -t
+if [ "${nEvts}" -ge 0 ]; then
+    heppy ${tmp} run_susySingleLepton_v2_cfg.py -p 0 -f -t -N "${nEvts}"
+else
+    heppy ${tmp} run_susySingleLepton_v2_cfg.py -p 0 -f -t
+fi
 cd "${pwd}"
 
 # Copy output to eos

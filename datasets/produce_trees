@@ -164,6 +164,7 @@ cmdCondor(){
     cmdadd 'sed -i "s/^Arguments.*/Arguments ='
     cmdadd '${CMSSW_BASE##*/}'
     cmdadd '${eosout//\//\\/}'
+    cmdadd '${nEvts//\//\\/}'
     cmdadd '${chunk//\//\\/}/" condor_trees_submission;'
 
     # To capture the job id but still print it to stdout, we need an additional
