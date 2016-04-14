@@ -149,6 +149,8 @@ cmdCondor(){
     cmd+=('rm -rf tarball_caf.tar.gz;')
     cmd+=('tar czf tarball_caf.tar.gz --transform "s/python/caf/"')
     cmdadd '-C /afs/cern.ch/cms/caf python;'
+    cmd+=('tar czf tarball_cmgdataset.tar.gz -C ~/ .cmgdataset')
+    cmdadd '|| (echo ~/.cmgdataset not found && exit 1);'
     cmd+=('echo Done.;')
 
     # Report number of jobs

@@ -42,6 +42,9 @@ echo "Set up CAF."
 tar xf tarball_caf.tar.gz
 PYTHONPATH="${PYTHONPATH}:${pwd}/caf/"
 
+# Set up CMG dataset
+echo "Set up cmgdataset."
+tar xf tarball_cmgdataset.tar.gz
 # Need to set HOME variable for caching of CMG datasets
 HOME="${pwd}"
 
