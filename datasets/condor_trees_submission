@@ -2,14 +2,14 @@ universe = vanilla
 Executable = condor_trees
 Requirements = OpSys == "LINUX" && (Arch != "DUMMY" )
 request_disk = 10000000
-request_memory = 5000
+request_memory = 15000
 Should_Transfer_Files = YES
 WhenToTransferOutput = ON_EXIT_OR_EVICT
 Transfer_Input_Files = condor_trees, tarball.tar.gz, tarball_caf.tar.gz, tarball_cmgdataset.tar.gz
-Output = trees_run60-n100/logs//tree_production_$(Cluster).stdout
-Error = trees_run60-n100/logs//tree_production_$(Cluster).stderr
-Log = trees_run60-n100/logs//tree_production_$(Cluster).condor
+Output = trees_run62-n100/logs//tree_production_$(Cluster).stdout
+Error = trees_run62-n100/logs//tree_production_$(Cluster).stderr
+Log = trees_run62-n100/logs//tree_production_$(Cluster).condor
 notification = Never
 x509userproxy = $ENV(X509_USER_PROXY)
-Arguments = RA4_7_4_14 /eos/uscms/store/user/bschneid/analysis/trees/trees_run59-n100 100 260
+Arguments = RA4_7_4_14 /eos/uscms/store/user/bschneid/analysis/trees/trees_run62-n100 100 260
 Queue 1
