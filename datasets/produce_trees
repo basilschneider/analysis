@@ -130,6 +130,10 @@ cmdCondor(){
     # Create directory for condor logs
     cmd+=('mkdir -p ${condorlogs}')
 
+    # Create output directory on eos (don't know how to do that on the worker
+    # nodes)
+    cmd+=('eos root://cmseos.fnal.gov/ mkdir -p ${eosout}')
+
     # Change output files of condor
     cmd+=('sed -i "s/^Output.*/Output =')
     cmdadd '${condorlogs//\//\\/}\/tree_production_\$(Cluster).stdout/"'

@@ -48,10 +48,6 @@ tar xf tarball_cmgdataset.tar.gz
 # Need to set HOME variable for caching of CMG datasets
 HOME="${pwd}"
 
-### HACK
-exit 1
-### HACK
-
 # Run heppy in subshell
 echo "Run heppy."
 cd ${CMSSW_BASE}/src/CMGTools/SUSYAnalysis/cfg/
@@ -62,10 +58,13 @@ else
 fi
 cd "${pwd}"
 
+# Move all directories to a unique name
+for folder in "${tmp}"/*; do
+    mv "${folder}" "${folder}"_"${chunk}"
+done
+
 # Copy output to eos
 echo "Copy output to eos."
-for file in "${tmp##*/}"/*; do
-    xrdcp -fs "${file}" root://cmseos.fnal.gov/"${out}"
-done
+xrdcp -rfs "${tmp}" root://cmseos.fnal.gov/"${out}"/
 
 echo "Bye."
