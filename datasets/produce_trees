@@ -178,12 +178,10 @@ cmdCondor(){
     # Loop over number of chunks
     cmd+=('for ((chunk=0; chunk<${chunks}; ++chunk)); do')
 
-    # Modify config file
-    cmdadd 'sed -i "/sedAnchor04/s/[0-9]\+/${chunk}/" ${cfgfile};'
-
     # Append arguments to condor script
     cmdadd 'echo "Arguments = '
-    cmdadd '${CMSSW_BASE##*/} ${eosout} ${nEvts} ${chunk}"'
+    cmdadd '${CMSSW_BASE##*/} ${CMSSW_BASE##*/}${cfgfile#*${CMSSW_BASE##*/}}'
+    cmdadd '${eosout} ${nEvts} ${chunk}"'
     cmdadd '>> condor_trees_submission_temp;'
     cmdadd 'echo "Queue 1" >> condor_trees_submission_temp;'
 

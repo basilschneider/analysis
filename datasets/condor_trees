@@ -5,9 +5,10 @@
 set -e -o pipefail
 
 cmssw="${1}"
-out="${2}"
-nEvts="${3}"
-chunk="${4}"
+cfgfile="${2}"
+out="${3}"
+nEvts="${4}"
+chunk="${5}"
 
 pwd="${PWD}"
 tmp="${PWD}"/tmp
@@ -21,11 +22,13 @@ echo "Operating system:" $(cat /etc/redhat-release)
 echo
 
 echo CMSSW: "${cmssw}"
+echo cfgfile: "${cfgfile}"
 echo out: "${out}"
 echo nEvts: "${nEvts}"
 echo chunk: "${chunk}"
 echo pwd: "${pwd}"
 echo
+
 
 # Set up CMSSW
 echo "Build CMSSW."
@@ -47,6 +50,9 @@ echo "Set up cmgdataset."
 tar xf tarball_cmgdataset.tar.gz
 # Need to set HOME variable for caching of CMG datasets
 HOME="${pwd}"
+
+# Modify chunk (filenumber) in config file
+sed -i "/sedAnchor04/s/[0-9]\+/${chunk}/" "${cfgfile}"
 
 # Run heppy in subshell
 echo "Run heppy."
