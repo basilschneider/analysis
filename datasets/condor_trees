@@ -6,9 +6,10 @@ set -e -o pipefail
 
 cmssw="${1}"
 cfgfile="${2}"
-out="${3}"
-nEvts="${4}"
-chunk="${5}"
+sample="${3}"
+out="${4}"
+nEvts="${5}"
+chunk="${6}"
 
 pwd="${PWD}"
 tmp="${PWD}"/tmp
@@ -23,6 +24,7 @@ echo
 
 echo CMSSW: "${cmssw}"
 echo cfgfile: "${cfgfile}"
+echo sample: "${sample}"
 echo out: "${out}"
 echo nEvts: "${nEvts}"
 echo chunk: "${chunk}"
@@ -51,8 +53,10 @@ tar xf tarball_cmgdataset.tar.gz
 # Need to set HOME variable for caching of CMG datasets
 HOME="${pwd}"
 
-# Modify chunk (filenumber) in config file
+# Modify config file
+sed -i "/sedAnchor03/s/comp = [^ ]*/comp = ${sample}/" ${cfgfile}
 sed -i "/sedAnchor04/s/[0-9]\+/${chunk}/" "${cfgfile}"
+
 
 # Run heppy in subshell
 echo "Run heppy."

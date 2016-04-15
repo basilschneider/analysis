@@ -124,9 +124,6 @@ cmdCondor(){
     cmd+=('noJobs=$(( ${noJobs} + ${chunks} ))')
     cmd+=('echo $chunks')
 
-    # Modify config file
-    cmd+=('sed -i "/sedAnchor03/s/comp = [^ ]*/comp = ${sample}/" ${cfgfile}')
-
     # Create directory for condor logs
     cmd+=('mkdir -p ${condorlogs}')
 
@@ -181,7 +178,7 @@ cmdCondor(){
     # Append arguments to condor script
     cmdadd 'echo "Arguments = '
     cmdadd '${CMSSW_BASE##*/} ${CMSSW_BASE##*/}${cfgfile#*${CMSSW_BASE##*/}}'
-    cmdadd '${eosout} ${nEvts} ${chunk}"'
+    cmdadd '${sample} ${eosout} ${nEvts} ${chunk}"'
     cmdadd '>> condor_trees_submission_temp;'
     cmdadd 'echo "Queue 1" >> condor_trees_submission_temp;'
 
