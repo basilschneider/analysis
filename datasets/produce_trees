@@ -10,6 +10,7 @@ nEvts=-1
 nSplitEvts=50000
 sample=TTJets_LO
 condor=false
+hadd=false
 debug=false
 dryrun=""
 
@@ -24,6 +25,7 @@ usage(){
     echo "                   See samples for a list of samples"
     echo "                   Use \"all\" to run over all samples"
     echo "-c                 Run on condor (default: $condor)"
+    echo "--hadd             hadd files on eos (default: $hadd)"
     echo "--debug            Debug messages (default: $debug)"
     echo "--dryrun           Don't send jobs"
 }
@@ -35,6 +37,7 @@ parseOptions(){
     OPT=$(getopt \
         --options ho:d:n:s:c \
         --long debug \
+        --long hadd \
         --long dryrun \
         --name "$0" \
         -- "$@"
@@ -56,6 +59,8 @@ parseOptions(){
                 shift 2;;
             -c) condor=true
                 shift 1;;
+            --hadd) hadd=true
+                shift 1;;
             --debug) debug=true
                 shift 1;;
             --dryrun) dryrun="echo"
@@ -76,6 +81,7 @@ parseOptions(){
     cfgfile+=run_susySingleLepton_v2_cfg.py
     eosout=/eos/uscms/store/user/bschneid/analysis/trees/"${out}"
     condorlogs="${out}"/logs/
+    outfiles="${out}"/outfiles.txt
 }
 
 produceTrees(){
@@ -87,6 +93,7 @@ produceTrees(){
     else
         cmdLocal
     fi
+    invokeCmd
 }
 
 cmdLocal(){
@@ -185,6 +192,9 @@ cmdCondor(){
     # Loop over number of chunks
     cmdadd 'for ((chunk=0; chunk<${chunks[idx]}; ++chunk)); do'
 
+    # Write name of output directory to text file
+    cmdadd 'echo "${samples[idx]}_${chunk}" >> ${outfiles};'
+
     # Append arguments to condor script
     cmdadd 'echo "Arguments = '
     cmdadd '${CMSSW_BASE##*/} ${CMSSW_BASE##*/}${cfgfile#*${CMSSW_BASE##*/}}'
@@ -222,6 +232,51 @@ cmdCondor(){
     cmd+=('echo Sent ${noJobs} jobs to condor.;')
 }
 
+# hadd files on eos
+haddFiles(){
+    # Merge root files
+    echo 'Merge root files.'
+    while read outfile; do
+        rootfile="${outfile}"/treeProducerSusySingleLepton/tree.root
+        fullpath="root://cmseos.fnal.gov/${eosout}/${rootfile}"
+        # Check for new sample
+        if [[ "${outfile##*_}" -eq 0 ]]; then
+            outdir="${out}/${outfile%_*}"/treeProducerSusySingleLepton
+            mkdir -p "${outdir}"
+            cmd+=("hadd -f ${outdir}/tree.root ${fullpath}")
+        else
+            cmdadd "${fullpath}"
+        fi
+    done < ${outfiles}
+    invokeCmd
+
+    # Merge text files
+    echo -n 'Download pickle files... '
+    while read outfile; do
+        pckfile="${outfile}"/skimAnalyzerCount/SkimReport.txt
+        fullpath="root://cmseos.fnal.gov/${eosout}/${pckfile}"
+        # Check for new sample
+        if [[ "${outfile##*_}" -eq 0 ]]; then
+            outdir="${out}/${outfile%_*}"/skimAnalyzerCount
+            mkdir -p "${outdir}"
+        fi
+        xrdcp -fs "${fullpath}" tmp/"${outfile}".txt
+    done < ${outfiles}
+    echo 'Done.'
+
+    echo -n 'Merge pickle files... '
+    for file in tmp/*_0.txt; do
+        fileall="${file%_0.txt}"
+        awk '
+            /All Events/ { all_events+=$3 }
+            /Sum Weights/ { sum_weights+=$3 }
+            END { print("Counter Skim Report:\n\tAll Events", all_events,
+            "\n\tSum Weights", sum_weights) } ' "${fileall}"* \
+            > "${out}/${fileall#tmp/}"/skimAnalyzerCount/SkimReport.txt
+    done
+    echo 'Done.'
+}
+
 # Append to last cmd entry
 cmdadd(){
     cmd[${#cmd[@]}-1]+=" $1"
@@ -242,8 +297,12 @@ invokeCmd(){
 
 main(){
     parseOptions "$@"
-    produceTrees
-    invokeCmd
+    # If hadd is true, we only hadd and ignore all other options
+    if [ "${hadd}" == true ]; then
+        haddFiles
+    else
+        produceTrees
+    fi
 }
 
 main "$@"
