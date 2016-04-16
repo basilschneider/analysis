@@ -11,7 +11,6 @@ nSplitEvts=50000
 condor=false
 verbose=false
 hadd=false
-debug=false
 dryrun=""
 
 # MC background
@@ -76,7 +75,6 @@ usage(){
     echo "-c                 Run on condor (default: $condor)"
     echo "-v                 Be verbose"
     echo "--hadd             hadd files on eos (default: $hadd)"
-    echo "--debug            Debug messages (default: $debug)"
     echo "--dryrun           Don't send jobs"
 }
 
@@ -87,7 +85,6 @@ parseOptions(){
         --options hco:d:e:v \
         --long hadd \
         --long dryrun \
-        --long debug \
         --name "$0" \
         -- "$@"
     )
@@ -113,8 +110,6 @@ parseOptions(){
             --hadd) hadd=true
                 shift 1;;
             --dryrun) dryrun="echo"
-                shift 1;;
-            --debug) debug=true
                 shift 1;;
             --) shift
                 break;;
@@ -366,9 +361,7 @@ invokeCmd(){
     # Invoke command(s) in subshell
     (
         for c in "${cmd[@]}"; do
-            if [ "$debug" == true ]; then
-                echo "$c"
-            fi
+            echo "$c" >> "${out}"/log.out
             eval "$c"
         done
     )

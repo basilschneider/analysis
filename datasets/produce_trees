@@ -11,7 +11,6 @@ nSplitEvts=50000
 sample=TTJets_LO
 condor=false
 hadd=false
-debug=false
 dryrun=""
 
 usage(){
@@ -26,7 +25,6 @@ usage(){
     echo "                   Use \"all\" to run over all samples"
     echo "-c                 Run on condor (default: $condor)"
     echo "--hadd             hadd files on eos (default: $hadd)"
-    echo "--debug            Debug messages (default: $debug)"
     echo "--dryrun           Don't send jobs"
 }
 
@@ -36,7 +34,6 @@ parseOptions(){
     # Check for flags
     OPT=$(getopt \
         --options ho:d:n:s:c \
-        --long debug \
         --long hadd \
         --long dryrun \
         --name "$0" \
@@ -61,8 +58,6 @@ parseOptions(){
                 shift 1;;
             --hadd) hadd=true
                 shift 1;;
-            --debug) debug=true
-                shift 1;;
             --dryrun) dryrun="echo"
                 shift 1;;
             --) shift
@@ -82,6 +77,9 @@ parseOptions(){
     eosout=/eos/uscms/store/user/bschneid/analysis/trees/"${out}"
     condorlogs="${out}"/logs/
     outfiles="${out}"/outfiles.txt
+
+    # Create directory for condor logs
+    mkdir -p "${condorlogs}"
 }
 
 produceTrees(){
@@ -137,9 +135,6 @@ cmdCondor(){
     # Check if sample was found
     cmd+=('if [[ "${#samples[@]}" -eq 0 ]]; then echo Sample $sample not found.;')
     cmdadd 'echo Exit.; exit; fi'
-
-    # Create directory for condor logs
-    cmd+=('mkdir -p ${condorlogs}')
 
     # Create output directory on eos (don't know how to do that on the worker
     # nodes)
@@ -287,9 +282,7 @@ invokeCmd(){
     # Invoke command(s) in subshell
     (
         for c in "${cmd[@]}"; do
-            if [ "$debug" == true ]; then
-                echo "$c"
-            fi
+            echo "$c" >> "${out}"/log.out
             eval "$c"
         done
     )
