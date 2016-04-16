@@ -54,6 +54,7 @@ tar xf tarball_cmgdataset.tar.gz
 HOME="${pwd}"
 
 # Modify config file
+echo "Modify config file."
 sed -i "/sedAnchor03/s/comp = [^ ]*/comp = ${sample}/" ${cfgfile}
 sed -i "/sedAnchor04/s/[0-9]\+/${chunk}/" "${cfgfile}"
 

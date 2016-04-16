@@ -107,22 +107,29 @@ cmdLocal(){
 }
 
 cmdCondor(){
-    # Get info about sample(s)
-    cmd+=('echo Get info about requested sample')
-    cmd+=('samplestr=$(awk "/\<${sample}\>/ { print \$2 }" samples)')
+    # Arrays with info about samples
+    cmd+=('samples=()')
+    cmd+=('samplesstr=()')
+    cmd+=('chunks=()')
+    cmd+=('noJobs=0')
+
+    # Loop over samples file to get job information
+    cmd+=('while read samplename samplestring; do')
+    cmdadd 'echo -n "Get number of files for ${samplename}... ";'
+    cmdadd 'if [ "${sample}" == "${samplename}" ] || [ "${sample}" == "all" ]; then'
+    cmdadd 'samples+=("${samplename}");'
+    cmdadd 'samplesstr+=("${samplestring}");'
+    cmdadd 'chunks+=($(das_client.py '
+    cmdadd '--query="summary dataset=${samplestring}"'
+    cmdadd '--key /tmp/x509up_u${UID} --cert /tmp/x509up_u${UID}'
+    cmdadd '| awk "/nfiles/ {print \$3}"));'
+    cmdadd 'echo ${chunks[${#chunks[@]}-1]};'
+    cmdadd 'noJobs=$(( $noJobs + ${chunks[${#chunks[@]}-1]} ));'
+    cmdadd 'fi; done < samples;'
 
     # Check if sample was found
-    cmd+=('if [[ -z ${samplestr} ]]; then echo Sample $sample not found.;')
+    cmd+=('if [[ "${#samples[@]}" -eq 0 ]]; then echo Sample $sample not found.;')
     cmdadd 'echo Exit.; exit; fi'
-
-    # Get number of files for sample
-    cmd+=('noJobs=0')
-    cmd+=('echo -n "Get number of files for ${sample}... "')
-    cmd+=('chunks=$(das_client.py --query="summary dataset=${samplestr}"')
-    cmdadd '--key /tmp/x509up_u${UID} --cert /tmp/x509up_u${UID}'
-    cmdadd '| awk "/nfiles/ {print \$3}")'
-    cmd+=('noJobs=$(( ${noJobs} + ${chunks} ))')
-    cmd+=('echo $chunks')
 
     # Create directory for condor logs
     cmd+=('mkdir -p ${condorlogs}')
@@ -157,6 +164,9 @@ cmdCondor(){
     # Report number of jobs
     cmd+=('echo Will send ${noJobs} jobs to condor.;')
 
+    # Loop over requested samples (1 or all)
+    cmd+=('for ((idx=0; idx<${#samples[@]}; ++idx)); do')
+
     # Copy condor submission template
     cmdadd 'rm -f condor_trees_submission_temp;'
     cmdadd 'cp condor_trees_submission{,_temp};'
@@ -173,12 +183,12 @@ cmdCondor(){
     cmdadd '>> condor_trees_submission_temp;'
 
     # Loop over number of chunks
-    cmd+=('for ((chunk=0; chunk<${chunks}; ++chunk)); do')
+    cmdadd 'for ((chunk=0; chunk<${chunks[idx]}; ++chunk)); do'
 
     # Append arguments to condor script
     cmdadd 'echo "Arguments = '
     cmdadd '${CMSSW_BASE##*/} ${CMSSW_BASE##*/}${cfgfile#*${CMSSW_BASE##*/}}'
-    cmdadd '${sample} ${eosout} ${nEvts} ${chunk}"'
+    cmdadd '${samples[idx]} ${eosout} ${nEvts} ${chunk}"'
     cmdadd '>> condor_trees_submission_temp;'
     cmdadd 'echo "Queue 1" >> condor_trees_submission_temp;'
 
@@ -204,6 +214,9 @@ cmdCondor(){
     # Copy condor file to logs file, for later resubmission if needed
     cmdadd 'mv condor_trees_submission_temp'
     cmdadd '${condorlogs}/condor_trees_submission_${jobID};'
+
+    # End loop
+    cmdadd 'done'
 
     # Report number of jobs again
     cmd+=('echo Sent ${noJobs} jobs to condor.;')
