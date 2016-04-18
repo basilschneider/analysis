@@ -78,7 +78,14 @@ parseOptions(){
     condorlogs="${out}"/logs/
     outfiles="${out}"/outfiles.txt
 
-    # Create directory for condor logs
+    # Absolute path to log file
+    if [ "${out:0:1}" != "/" ]; then
+        log="${PWD}"/"${out}"/log.out
+    else
+        log="${out}"/log.out
+    fi
+
+    # Create directory for logs
     mkdir -p "${condorlogs}"
 }
 
