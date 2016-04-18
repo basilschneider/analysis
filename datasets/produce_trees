@@ -120,8 +120,8 @@ cmdCondor(){
 
     # Loop over samples file to get job information
     cmd+=('while read samplename samplestring; do')
-    cmdadd 'echo -n "Get number of files for ${samplename}... ";'
     cmdadd 'if [ "${sample}" == "${samplename}" ] || [ "${sample}" == "all" ]; then'
+    cmdadd 'echo -n "Get number of files for ${samplename}... ";'
     cmdadd 'samples+=("${samplename}");'
     cmdadd 'samplesstr+=("${samplestring}");'
     cmdadd 'chunks+=($(das_client.py '
