@@ -10,6 +10,7 @@ nEvts=-1
 nSplitEvts=50000
 sample=TTJets_LO
 condor=false
+chunk=false
 hadd=false
 dryrun=""
 
@@ -22,8 +23,9 @@ usage(){
     echo "-n N               Process N events (default: $nEvts)"
     echo "-s sample          Run over sample (default: $sample)"
     echo "                   See samples for a list of samples"
-    echo "                   Use \"all\" to run over all samples"
+    echo "                   Use \"all\" to run over all samples (on condor)"
     echo "-c                 Run on condor (default: $condor)"
+    echo "--chunk            run only over first chunk (default: $chunk)"
     echo "--hadd             hadd files on eos (default: $hadd)"
     echo "--dryrun           Don't send jobs"
 }
@@ -34,6 +36,7 @@ parseOptions(){
     # Check for flags
     OPT=$(getopt \
         --options ho:d:n:s:c \
+        --long chunk \
         --long hadd \
         --long dryrun \
         --name "$0" \
@@ -55,6 +58,8 @@ parseOptions(){
             -s) sample="${2}"
                 shift 2;;
             -c) condor=true
+                shift 1;;
+            --chunk) chunk=true
                 shift 1;;
             --hadd) hadd=true
                 shift 1;;
@@ -133,10 +138,11 @@ cmdCondor(){
     cmdadd 'echo -n "Get number of files for ${samplename}... ";'
     cmdadd 'samples+=("${samplename}");'
     cmdadd 'samplesstr+=("${samplestring}");'
+    cmdadd 'if [ "$chunk" == "true" ]; then chunks+=(1); else'
     cmdadd 'chunks+=($(das_client.py '
     cmdadd '--query="summary dataset=${samplestring}"'
     cmdadd '--key /tmp/x509up_u${UID} --cert /tmp/x509up_u${UID}'
-    cmdadd '| awk "/nfiles/ {print \$3}"));'
+    cmdadd '| awk "/nfiles/ {print \$3}")); fi;'
     cmdadd 'echo ${chunks[${#chunks[@]}-1]};'
     cmdadd 'noJobs=$(( $noJobs + ${chunks[${#chunks[@]}-1]} ));'
     cmdadd 'fi; done < samples;'
@@ -194,15 +200,15 @@ cmdCondor(){
     cmdadd '>> condor_trees_submission_temp;'
 
     # Loop over number of chunks
-    cmdadd 'for ((chunk=0; chunk<${chunks[idx]}; ++chunk)); do'
+    cmdadd 'for ((chunk_idx=0; chunk_idx<${chunks[idx]}; ++chunk_idx)); do'
 
     # Write name of output directory to text file
-    cmdadd 'echo "${samples[idx]}_${chunk}" >> ${outfiles};'
+    cmdadd 'echo "${samples[idx]}_${chunk_idx}" >> ${outfiles};'
 
     # Append arguments to condor script
     cmdadd 'echo "Arguments = '
     cmdadd '${CMSSW_BASE##*/} ${CMSSW_BASE##*/}${cfgfile#*${CMSSW_BASE##*/}}'
-    cmdadd '${samples[idx]} ${eosout} ${nEvts} ${chunk}"'
+    cmdadd '${samples[idx]} ${eosout} ${nEvts} ${chunk_idx}"'
     cmdadd '>> condor_trees_submission_temp;'
     cmdadd 'echo "Queue 1" >> condor_trees_submission_temp;'
 
