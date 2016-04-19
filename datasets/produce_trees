@@ -79,7 +79,9 @@ parseOptions(){
     # After parsing all options, set path's
     cfgfile=${CMSSW_BASE}/src/CMGTools/SUSYAnalysis/cfg/
     cfgfile+=run_susySingleLepton_v2_cfg.py
+    eos=root://cmseos.fnal.gov/
     eosout=/eos/uscms/store/user/bschneid/analysis/trees/"${out}"
+    eoschunk="${eosout}"/chunks
     condorlogs="${out}"/logs/
     outfiles="${out}"/outfiles.txt
 
@@ -151,10 +153,6 @@ cmdCondor(){
     cmd+=('if [[ "${#samples[@]}" -eq 0 ]]; then echo Sample $sample not found.;')
     cmdadd 'echo Exit.; exit; fi'
 
-    # Create output directory on eos (don't know how to do that on the worker
-    # nodes)
-    cmd+=('eos root://cmseos.fnal.gov/ mkdir -p ${eosout}')
-
     # Change output files of condor
     cmd+=('sed -i "s/^Output.*/Output =')
     cmdadd '${condorlogs//\//\\/}\/tree_production_\$(Cluster).stdout/"'
@@ -208,7 +206,7 @@ cmdCondor(){
     # Append arguments to condor script
     cmdadd 'echo "Arguments = '
     cmdadd '${CMSSW_BASE##*/} ${CMSSW_BASE##*/}${cfgfile#*${CMSSW_BASE##*/}}'
-    cmdadd '${samples[idx]} ${eosout} ${nEvts} ${chunk_idx}"'
+    cmdadd '${samples[idx]} ${eoschunk} ${nEvts} ${chunk_idx}"'
     cmdadd '>> condor_trees_submission_temp;'
     cmdadd 'echo "Queue 1" >> condor_trees_submission_temp;'
 
@@ -248,12 +246,13 @@ haddFiles(){
     echo 'Merge root files.'
     while read outfile; do
         rootfile="${outfile}"/treeProducerSusySingleLepton/tree.root
-        fullpath="root://cmseos.fnal.gov/${eosout}/${rootfile}"
+        fullpath="${eos}${eoschunk}/${rootfile}"
         # Check for new sample
         if [[ "${outfile##*_}" -eq 0 ]]; then
-            outdir="${out}/${outfile%_*}"/treeProducerSusySingleLepton
-            mkdir -p "${outdir}"
-            cmd+=("hadd -f ${outdir}/tree.root ${fullpath}")
+            targetdir="${eosout}"/"${outfile%_*}"/treeProducerSusySingleLepton
+            target="${targetdir}"/tree.root
+            xrdfs "${eos}" mkdir -p "${targetdir}"
+            cmd+=("hadd -f ${eos}${target} ${fullpath}")
         else
             cmdadd "${fullpath}"
         fi
@@ -264,26 +263,32 @@ haddFiles(){
     echo -n 'Download pickle files... '
     while read outfile; do
         pckfile="${outfile}"/skimAnalyzerCount/SkimReport.txt
-        fullpath="root://cmseos.fnal.gov/${eosout}/${pckfile}"
-        # Check for new sample
-        if [[ "${outfile##*_}" -eq 0 ]]; then
-            outdir="${out}/${outfile%_*}"/skimAnalyzerCount
-            mkdir -p "${outdir}"
-        fi
-        xrdcp -fs "${fullpath}" tmp/"${outfile}".txt
+        fullpath="${eos}"/"${eoschunk}"/"${pckfile}"
+        tmpout=tmp/"${out}"/"${outfile%_*}"
+        mkdir -p "${tmpout}"
+        xrdcp -fs "${fullpath}" "${tmpout}"/"${outfile}".txt
     done < ${outfiles}
     echo 'Done.'
 
     echo -n 'Merge pickle files... '
-    for file in tmp/*_0.txt; do
-        fileall="${file%_0.txt}"
+    for folder in tmp/"${out}"/*; do
+        sample="${folder##*/}"
+        # Merge numbers
         awk '
             /All Events/ { all_events+=$3 }
             /Sum Weights/ { sum_weights+=$3 }
             END { print("Counter Skim Report:\n\tAll Events", all_events,
-            "\n\tSum Weights", sum_weights) } ' "${fileall}"* \
-            > "${out}/${fileall#tmp/}"/skimAnalyzerCount/SkimReport.txt
+            "\n\tSum Weights", sum_weights) } ' "${folder}"/* \
+            > "${out}"/SkimReport_"${sample}".txt
+
+        # Upload to EOS
+        eospckfolder="${eosout}"/"${sample}"/skimAnalyzerCount
+        xrdfs "${eos}" mkdir -p "${eospckfolder}"
+        xrdcp -fs "${out}"/SkimReport_"${sample}".txt "${eos}${eospckfolder}"/SkimReport.txt
+
     done
+    # Delete temporary files
+    rm -rf tmp/"${out}"
     echo 'Done.'
 }
 
@@ -297,7 +302,7 @@ invokeCmd(){
     # Invoke command(s) in subshell
     (
         for c in "${cmd[@]}"; do
-            echo "$c" >> "${out}"/log.out
+            echo "$c" >> "${log}"
             eval "$c"
         done
     )

@@ -76,6 +76,7 @@ done
 
 # Copy output to eos
 echo "Copy output to eos."
-xrdcp -rfs "${tmp}" root://cmseos.fnal.gov/"${out}"/
+xrdfs root://cmseos.fnal.gov/ mkdir -p "${out}"
+xrdcp -rfs "${tmp}" root://cmseos.fnal.gov/"${out}"
 
 echo "Bye."
