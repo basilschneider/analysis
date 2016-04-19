@@ -228,7 +228,7 @@ cmdCondor(){
 
     # Extract job ID
     cmdadd 'if [ -z "${dryrun}" ]; then'
-    cmdadd 'jobID=$(grep -o "[0-9]\{4,\}" <<< "${jobID}");'
+    cmdadd 'jobID=$(grep -o "[0-9]\{5,\}" <<< "${jobID}");'
     cmdadd 'else jobID=999999; fi;'
 
     # Copy condor file to logs file, for later resubmission if needed
