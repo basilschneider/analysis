@@ -242,21 +242,30 @@ cmdCondor(){
 
 # hadd files on eos
 haddFiles(){
-    # Merge root files
+    # Merge root files locally
     echo 'Merge root files.'
     while read outfile; do
         rootfile="${outfile}"/treeProducerSusySingleLepton/tree.root
         fullpath="${eos}${eoschunk}/${rootfile}"
         # Check for new sample
         if [[ "${outfile##*_}" -eq 0 ]]; then
-            targetdir="${eosout}"/"${outfile%_*}"/treeProducerSusySingleLepton
-            target="${targetdir}"/tree.root
-            xrdfs "${eos}" mkdir -p "${targetdir}"
-            cmd+=("hadd -f ${eos}${target} ${fullpath}")
+            cmd+=("hadd -f ${outfile%_*}.root ${fullpath}")
         else
             cmdadd "${fullpath}"
         fi
     done < ${outfiles}
+
+    # Copy them to eos
+    for ((idx=0; idx<${#cmd[@]}; ++idx)); do
+        outfile="${cmd[idx]#hadd -f }"
+        outfile="${outfile%% *}"
+        targetdir="${eosout}"/"${outfile%.root}"/treeProducerSusySingleLepton
+        target="${targetdir}"/tree.root
+        # Append to last cmd
+        cmd[idx]+="; xrdfs ${eos} mkdir -p ${targetdir}"
+        cmd[idx]+="; xrdcp -f ${outfile} ${eos}${target}"
+        cmd[idx]+="; rm ${outfile}"
+    done
     invokeCmd
 
     # Merge text files
