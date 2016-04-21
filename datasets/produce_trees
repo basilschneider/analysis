@@ -147,7 +147,7 @@ cmdCondor(){
     cmdadd '| awk "/nfiles/ {print \$3}")); fi;'
     cmdadd 'echo ${chunks[${#chunks[@]}-1]};'
     cmdadd 'noJobs=$(( $noJobs + ${chunks[${#chunks[@]}-1]} ));'
-    cmdadd 'fi; done < samples;'
+    cmdadd 'fi; done < samples_MC;'
 
     # Check if sample was found
     cmd+=('if [[ "${#samples[@]}" -eq 0 ]]; then echo Sample $sample not found.;')
