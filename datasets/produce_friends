@@ -16,6 +16,7 @@ dryrun=""
 # MC background
 eos=root://eoscms.cern.ch//eos/cms/store/cmst3/group/susy/alobanov/MC/CMGtuples/MiniAODv2/Spring15_CBID/HT350_1nLep_LT200_hadrFlav
 skip=(Friends)
+skip+=(chunks)
 #skip+=(DYJetsToLL_M50_HT100to200)
 #skip+=(DYJetsToLL_M50_HT200to400)
 #skip+=(DYJetsToLL_M50_HT400to600)
@@ -126,6 +127,12 @@ parseOptions(){
     eosout=/eos/uscms/store/user/bschneid/analysis/friends/"${out}"
     rootfiles="${out}"/rootfiles.txt
     condorlogs="${out}"/logs
+
+    # Make output absolute, since we are changing directory later
+    if [ "${out:0:1}" != "/" ]; then
+        out=${PWD}/${out}
+    fi
+    mkdir -p "${out}"
 }
 
 parseEos(){
@@ -157,11 +164,6 @@ produceFriends(){
     # Create temporary directory to download samples from eos
     tmp=${dir}/tmp
     cmd+=('mkdir -p ${tmp}')
-
-    # Make output absolute, since we are changing directory later
-    if [ "${out:0:1}" != "/" ]; then
-        cmd+=('out=${PWD}/${out}')
-    fi
 
     if [ "${condor}" == true ]; then
         cmdCondor
