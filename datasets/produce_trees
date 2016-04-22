@@ -171,26 +171,13 @@ cmdCondor(){
     cmd+=('if [[ "${#samples[@]}" -eq 0 ]]; then echo Sample $sample not found.;')
     cmdadd 'echo Exit.; exit; fi'
 
-    # Change output files of condor
-    cmd+=('sed -i "s/^Output.*/Output =')
-    cmdadd '${condorlogs//\//\\/}\/tree_production_\$(Cluster).stdout/"'
-    cmdadd 'condor_trees_submission;'
-    cmd+=('sed -i "s/^Error.*/Error =')
-    cmdadd '${condorlogs//\//\\/}\/tree_production_\$(Cluster).stderr/"'
-    cmdadd 'condor_trees_submission;'
-    cmd+=('sed -i "s/^Log.*/Log =')
-    cmdadd '${condorlogs//\//\\/}\/tree_production_\$(Cluster).condor/"'
-    cmdadd 'condor_trees_submission;'
-
     # Pack directory for submission
     cmd+=('echo -n "Pack directories for submission... ";')
-    cmd+=('rm -f tarball.tar.gz;')
-    cmd+=('tar czf tarball.tar.gz -C ${CMSSW_BASE%/*}')
+    cmd+=('tar czf "${out}"/tarball.tar.gz -C ${CMSSW_BASE%/*}')
     cmdadd '--exclude .git ${CMSSW_BASE##*/};'
-    cmd+=('rm -rf tarball_caf.tar.gz;')
-    cmd+=('tar czf tarball_caf.tar.gz --transform "s/python/caf/"')
+    cmd+=('tar czf "${out}"/tarball_caf.tar.gz --transform "s/python/caf/"')
     cmdadd '-C /afs/cern.ch/cms/caf python;'
-    cmd+=('tar czf tarball_cmgdataset.tar.gz -C ~/ .cmgdataset')
+    cmd+=('tar czf "${out}"/tarball_cmgdataset.tar.gz -C ~/ .cmgdataset')
     cmdadd '|| (echo ~/.cmgdataset not found && exit 1);'
     cmd+=('echo Done.;')
 
@@ -205,6 +192,8 @@ cmdCondor(){
     cmdadd 'cp condor_trees_submission{,_temp};'
 
     # Append output files to condor script
+    cmdadd 'sed -i "s/tarball/"${out}"\/tarball/g"'
+    cmdadd 'condor_trees_submission_temp;'
     cmdadd 'echo "Output ='
     cmdadd '${condorlogs}/tree_production_\$(Cluster).\$(Process).stdout"'
     cmdadd '>> condor_trees_submission_temp;'
