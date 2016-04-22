@@ -23,7 +23,8 @@ usage(){
     echo "-n N               Process N events (default: $nEvts)"
     echo "-s sample          Run over sample (default: $sample)"
     echo "                   See samples for a list of samples"
-    echo "                   Use \"all\" to run over all samples (on condor)"
+    echo "                   Use \"MC\" to run over all MC samples"
+    echo "                   Use \"data\" to run over all data samples"
     echo "-c                 Run on condor (default: $condor)"
     echo "--chunk            run only over first chunk (default: $chunk)"
     echo "--hadd             hadd files on eos (default: $hadd)"
@@ -132,9 +133,9 @@ cmdCondor(){
     cmd+=('chunks=()')
     cmd+=('noJobs=0')
 
-    # Loop over samples file to get job information
+    # Loop over MC samples file to get job information
     cmd+=('while read samplename samplestring; do')
-    cmdadd 'if [ "${sample}" == "${samplename}" ] || [ "${sample}" == "all" ]; then'
+    cmdadd 'if [ "${sample}" == "${samplename}" ] || [ "${sample}" == "MC" ]; then'
     # Skip if first character in samples file is "#"
     cmdadd 'if [ "${samplename:0:1}" == "#" ]; then continue; fi;'
     cmdadd 'echo -n "Get number of files for ${samplename}... ";'
@@ -148,6 +149,23 @@ cmdCondor(){
     cmdadd 'echo ${chunks[${#chunks[@]}-1]};'
     cmdadd 'noJobs=$(( $noJobs + ${chunks[${#chunks[@]}-1]} ));'
     cmdadd 'fi; done < samples_MC;'
+
+    # Loop over data samples file to get job information
+    cmd+=('while read samplename samplestring; do')
+    cmdadd 'if [ "${sample}" == "${samplename}" ] || [ "${sample}" == "data" ]; then'
+    # Skip if first character in samples file is "#"
+    cmdadd 'if [ "${samplename:0:1}" == "#" ]; then continue; fi;'
+    cmdadd 'echo -n "Get number of files for ${samplename}... ";'
+    cmdadd 'samples+=("${samplename}");'
+    cmdadd 'samplesstr+=("${samplestring}");'
+    cmdadd 'if [ "$chunk" == "true" ]; then chunks+=(1); else'
+    cmdadd 'chunks+=($(das_client.py '
+    cmdadd '--query="summary dataset=${samplestring}"'
+    cmdadd '--key /tmp/x509up_u${UID} --cert /tmp/x509up_u${UID}'
+    cmdadd '| awk "/nfiles/ {print \$3}")); fi;'
+    cmdadd 'echo ${chunks[${#chunks[@]}-1]};'
+    cmdadd 'noJobs=$(( $noJobs + ${chunks[${#chunks[@]}-1]} ));'
+    cmdadd 'fi; done < samples_data;'
 
     # Check if sample was found
     cmd+=('if [[ "${#samples[@]}" -eq 0 ]]; then echo Sample $sample not found.;')
