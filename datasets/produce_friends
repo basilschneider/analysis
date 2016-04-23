@@ -8,6 +8,7 @@ dir=~/analysis/datasets/
 out=output
 tree=treeProducerSusySingleLepton
 nSplitEvts=50000
+localsample=
 condor=false
 verbose=false
 hadd=false
@@ -74,6 +75,7 @@ usage(){
     echo "-d dir             Path to output directory (default: $dir)"
     echo "-e eos             Path to eos directory (default: $eos)"
     echo "-t tree            Path to tree in eos directory (default: $tree)"
+    echo "-l local           Use local sample (default: $localsample)"
     echo "-c                 Run on condor (default: $condor)"
     echo "-v                 Be verbose"
     echo "--hadd             hadd files on eos (default: $hadd)"
@@ -84,7 +86,7 @@ parseOptions(){
 
     # Check for flags
     OPT=$(getopt \
-        --options hco:d:e:v \
+        --options hl:co:d:e:v \
         --long hadd \
         --long dryrun \
         --name "$0" \
@@ -104,6 +106,8 @@ parseOptions(){
             -e) eos="${2}"
                 shift 2;;
             -t) tree="${2}"
+                shift 2;;
+            -l) localsample="${2}"
                 shift 2;;
             -c) condor=true
                 shift 1;;
@@ -152,24 +156,30 @@ produceFriends(){
     # Commands to be executed later
     cmd=()
 
-    # Get list of trees
-    cmd+=('echo -n "Get list of datasets from eos... "')
-    cmd+=('datasets=$(xrdfs $eosSite ls $eosPath)')
-    cmd+=('echo Done.')
-
-    if [ "$verbose" = true ]; then
-        cmd+=('echo Datasets found on eos:')
-        cmd+=('sed "s/ /\n/g" <<< ${datasets}')
-    fi
-
-    # Create temporary directory to download samples from eos
-    tmp=${dir}/tmp
-    cmd+=('mkdir -p ${tmp}')
-
-    if [ "${condor}" == true ]; then
-        cmdCondor
+    if ! [ -z "${localsample}" ]; then
+        localsample=${dir}/"${localsample}"
+        cmdLocalLocal
     else
-        cmdLocal
+
+        # Get list of trees
+        cmd+=('echo -n "Get list of datasets from eos... "')
+        cmd+=('datasets=$(xrdfs $eosSite ls $eosPath)')
+        cmd+=('echo Done.')
+
+        if [ "$verbose" = true ]; then
+            cmd+=('echo Datasets found on eos:')
+            cmd+=('sed "s/ /\n/g" <<< ${datasets}')
+        fi
+
+        # Create temporary directory to download samples from eos
+        tmp=${dir}/tmp
+        cmd+=('mkdir -p ${tmp}')
+
+        if [ "${condor}" == true ]; then
+            cmdCondor
+        else
+            cmdLocalEos
+        fi
     fi
 }
 
@@ -306,8 +316,8 @@ cmdCondor(){
     cmd+=('echo Sent ${noJobs} jobs to condor.;')
 }
 
-# When running locally
-cmdLocal(){
+# Run locally, sample on eos
+cmdLocalEos(){
 
     # Loop over datasets
     cmd+=('for dataset in ${datasets}; do')
@@ -333,6 +343,20 @@ cmdLocal(){
 
     # End loop
     cmdadd 'done'
+}
+
+# Run locally, sample local
+cmdLocalLocal(){
+
+    # Subshell to make friend trees
+    cmd+=('(')
+    cmdadd 'cd ${CMSSW_BASE}/src/CMGTools/SUSYAnalysis/macros/;'
+    cmdadd 'echo "Produce friend tree... ";'
+    cmdadd '${dryrun} python prepareEventVariablesFriendTree.py -N ${nSplitEvts} -j 24 '
+    cmdadd '${localsample} ${out}'
+    pipeout
+    cmdadd 'echo Done.;'
+    cmdadd ');'
 }
 
 # Append to last cmd entry
