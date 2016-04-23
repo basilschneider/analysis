@@ -14,7 +14,8 @@ hadd=false
 dryrun=""
 
 # MC background
-eos=root://eoscms.cern.ch//eos/cms/store/cmst3/group/susy/alobanov/MC/CMGtuples/MiniAODv2/Spring15_CBID/HT350_1nLep_LT200_hadrFlav
+#eos=root://eoscms.cern.ch//eos/cms/store/cmst3/group/susy/alobanov/MC/CMGtuples/MiniAODv2/Spring15_CBID/HT350_1nLep_LT200_hadrFlav
+eos=root://cmseos.fnal.gov//eos/uscms/store/user/bschneid/analysis/trees/trees_run153-full-run-skim-mc
 skip=(Friends)
 skip+=(chunks)
 #skip+=(DYJetsToLL_M50_HT100to200)

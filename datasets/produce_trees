@@ -134,7 +134,7 @@ cmdCondor(){
     cmd+=('noJobs=0')
 
     # Loop over MC samples file to get job information
-    cmd+=('while read samplename samplestring; do')
+    cmd+=('while read samplename samplestring nfiles; do')
     cmdadd 'if [ "${sample}" == "${samplename}" ] || [ "${sample}" == "MC" ]; then'
     # Skip if first character in samples file is "#"
     cmdadd 'if [ "${samplename:0:1}" == "#" ]; then continue; fi;'
@@ -142,16 +142,13 @@ cmdCondor(){
     cmdadd 'samples+=("${samplename}");'
     cmdadd 'samplesstr+=("${samplestring}");'
     cmdadd 'if [ "$chunk" == "true" ]; then chunks+=(1); else'
-    cmdadd 'chunks+=($(das_client.py '
-    cmdadd '--query="summary dataset=${samplestring}"'
-    cmdadd '--key /tmp/x509up_u${UID} --cert /tmp/x509up_u${UID}'
-    cmdadd '| awk "/nfiles/ {print \$3}")); fi;'
+    cmdadd 'chunks+=(${nfiles}); fi;'
     cmdadd 'echo ${chunks[${#chunks[@]}-1]};'
     cmdadd 'noJobs=$(( $noJobs + ${chunks[${#chunks[@]}-1]} ));'
     cmdadd 'fi; done < samples_MC;'
 
     # Loop over data samples file to get job information
-    cmd+=('while read samplename samplestring; do')
+    cmd+=('while read samplename samplestring nfiles; do')
     cmdadd 'if [ "${sample}" == "${samplename}" ] || [ "${sample}" == "data" ]; then'
     # Skip if first character in samples file is "#"
     cmdadd 'if [ "${samplename:0:1}" == "#" ]; then continue; fi;'
@@ -159,10 +156,7 @@ cmdCondor(){
     cmdadd 'samples+=("${samplename}");'
     cmdadd 'samplesstr+=("${samplestring}");'
     cmdadd 'if [ "$chunk" == "true" ]; then chunks+=(1); else'
-    cmdadd 'chunks+=($(das_client.py '
-    cmdadd '--query="summary dataset=${samplestring}"'
-    cmdadd '--key /tmp/x509up_u${UID} --cert /tmp/x509up_u${UID}'
-    cmdadd '| awk "/nfiles/ {print \$3}")); fi;'
+    cmdadd 'chunks+=(${nfiles}); fi;'
     cmdadd 'echo ${chunks[${#chunks[@]}-1]};'
     cmdadd 'noJobs=$(( $noJobs + ${chunks[${#chunks[@]}-1]} ));'
     cmdadd 'fi; done < samples_data;'
