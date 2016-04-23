@@ -195,9 +195,11 @@ cmdCondor(){
 
     # Get number of entries in tree
     cmdadd 'echo -n "Get number of events for ${sample}... ";'
+    cmdadd 'xrdcp -fs ${eosSite}${dataset}/${tree}/tree.root .;'
     cmdadd 'entries=$(python -c "from ToolboxHelper import \
-        get_tree_entries_eos; print \
-        get_tree_entries_eos(\"${eosSite}${dataset}/${tree}/tree.root\", \"tree\")");'
+        get_tree_entries; print \
+        get_tree_entries(\"tree.root\", \"tree\")");'
+    cmdadd 'rm tree.root;'
     cmdadd 'echo ${entries};'
 
     # Write info into file for condor processing
