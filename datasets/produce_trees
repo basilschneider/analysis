@@ -167,10 +167,13 @@ cmdCondor(){
 
     # Pack directory for submission
     cmd+=('echo -n "Pack directories for submission... ";')
+    cmd+=('rm -f "${out}"/tarball.tar.gz')
     cmd+=('tar czf "${out}"/tarball.tar.gz -C ${CMSSW_BASE%/*}')
     cmdadd '--exclude .git ${CMSSW_BASE##*/};'
+    cmd+=('rm -f "${out}"/tarball_caf.tar.gz')
     cmd+=('tar czf "${out}"/tarball_caf.tar.gz --transform "s/python/caf/"')
     cmdadd '-C /afs/cern.ch/cms/caf python;'
+    cmd+=('rm -f "${out}"/tarball_cmgdataset.tar.gz')
     cmd+=('tar czf "${out}"/tarball_cmgdataset.tar.gz -C ~/ .cmgdataset')
     cmdadd '|| (echo ~/.cmgdataset not found && exit 1);'
     cmd+=('echo Done.;')
@@ -186,7 +189,7 @@ cmdCondor(){
     cmdadd 'cp condor_trees_submission{,_temp};'
 
     # Append output files to condor script
-    cmdadd 'sed -i "s/tarball/"${out}"\/tarball/g"'
+    cmdadd 'sed -i "s/tarball/"${out//\//\\/}"\/tarball/g"'
     cmdadd 'condor_trees_submission_temp;'
     cmdadd 'echo "Output ='
     cmdadd '${condorlogs}/tree_production_\$(Cluster).\$(Process).stdout"'

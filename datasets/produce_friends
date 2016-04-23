@@ -230,6 +230,7 @@ cmdCondor(){
 
     # Pack directory for submission
     cmd+=('echo -n "Pack directory for submission... ";')
+    cmd+=('rm -f "${out}"/tarball.tar.gz')
     cmd+=('tar czf "${out}"/tarball.tar.gz -C ${CMSSW_BASE%/*}')
     cmdadd '--exclude .git ${CMSSW_BASE##*/};'
     cmd+=('echo Done.;')
@@ -242,7 +243,7 @@ cmdCondor(){
     cmdadd 'cp condor_friends_submission{,_temp};'
 
     # Append output files to condor script
-    cmdadd 'sed -i "s/tarball/"${out}"\/tarball/g"'
+    cmdadd 'sed -i "s/tarball/"${out//\//\\/}"\/tarball/g"'
     cmdadd 'condor_friends_submission_temp;'
     cmdadd 'echo "Output ='
     cmdadd '${condorlogs}/friend_production_\$(Cluster).\$(Process).stdout"'
