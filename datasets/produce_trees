@@ -205,7 +205,7 @@ cmdCondor(){
     cmdadd 'for ((chunk_idx=0; chunk_idx<${chunks[idx]}; ++chunk_idx)); do'
 
     # Write name of output directory to text file
-    cmdadd 'echo "${samples[idx]}_${chunk_idx}" >> ${outfiles};'
+    cmdadd 'echo "${samples[idx]}/${samples[idx]}_${chunk_idx}" >> ${outfiles};'
 
     # Append arguments to condor script
     cmdadd 'echo "Arguments = '
@@ -253,13 +253,15 @@ haddFiles(){
         fullpath="${eos}${eoschunk}/${rootfile}"
         # Check for new sample
         if [[ "${outfile##*_}" -eq 0 ]]; then
-            cmd+=("hadd -f ${outfile%_*}.root ${fullpath}")
+            target="${outfile##*/}"
+            target="${target%_*}"
+            cmd+=("hadd -f ${target}.root ${fullpath}")
         else
             cmdadd "${fullpath}"
         fi
     done < ${outfiles}
 
-    # Copy them to eos
+    # Copy root files to eos
     for ((idx=0; idx<${#cmd[@]}; ++idx)); do
         outfile="${cmd[idx]#hadd -f }"
         outfile="${outfile%% *}"
@@ -277,8 +279,8 @@ haddFiles(){
     while read outfile; do
         pckfile="${outfile}"/skimAnalyzerCount/SkimReport.txt
         fullpath="${eos}"/"${eoschunk}"/"${pckfile}"
-        tmpout=tmp/"${out}"/"${outfile%_*}"
-        mkdir -p "${tmpout}"
+        tmpout=tmp/"${out}"
+        mkdir -p "${tmpout}"/"${outfile%/*}"
         xrdcp -fs "${fullpath}" "${tmpout}"/"${outfile}".txt
     done < ${outfiles}
     echo 'Done.'
