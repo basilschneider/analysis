@@ -5,6 +5,7 @@
 # Default variables
 dir=RA4_7_4_14
 release=7_4_14
+arch=slc6_amd64_gcc491
 err=false
 cvmfs=false
 
@@ -14,12 +15,14 @@ usage(){
     echo "-h                 Show this help"
     echo "-d dir             Set CMSSW directory (default: ${dir})"
     echo "-r release         Use CMSSW release (default: ${release})"
+    echo "-a arch            Use architecture (default: ${arch})"
     echo "-c                 Give /cvmfs binaries precedence over private ones"
 }
 
 setupEnv(){
-    echo "Setting up release ${release} in directory ${dir}."
+    echo "Setting up release ${release} in directory ${dir} for architecture ${arch}."
     cmssw
+    export SCRAM_ARCH="${arch}"
     scram project -n "${dir}" CMSSW CMSSW_"${release}"
     pwd="${PWD}"
     cd "${dir}"/src
@@ -33,7 +36,7 @@ setupEnv(){
 parseOptions(){
 
     OPT=$(getopt \
-        --options hd:r:c \
+        --options hd:r:a:c \
         --name "setupEnvironment_inc" \
         -- "$@"
     )
@@ -56,6 +59,10 @@ parseOptions(){
             ;;
             -r)
                 release="${2}"
+                shift 2
+            ;;
+            -a)
+                arch="${2}"
                 shift 2
             ;;
             -c)
